@@ -1,0 +1,21 @@
+# --- Python Global ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+.venv
+pip-log.txt
+
+# --- VS Code / IDE ---
+.vscode/
+.idea/
+
+# --- OS Junk ---
+.DS_Store
+Thumbs.db
+
+# УВАГА: Ми НЕ ігноруємо *.json, бо вони потрібні для роботи!
