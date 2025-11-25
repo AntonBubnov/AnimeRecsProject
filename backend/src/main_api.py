@@ -60,7 +60,9 @@ def load_data():
             # Спрощуємо структуру для швидкого доступу
             for aid, data in raw_meta.items():
                 # Витягуємо URL картинки (medium size)
-                pic_url = data.get("main_picture", {}).get("medium", "")
+                #pic_url = data.get("main_picture", {}).get("medium", "")
+                main_pic = data.get("main_picture", {})
+                pic_url = main_pic.get("large") or main_pic.get("medium", "")
 
                 METADATA[int(aid)] = {
                     "title": data.get("title", "Unknown"),
