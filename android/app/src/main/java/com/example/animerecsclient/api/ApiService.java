@@ -50,4 +50,11 @@ public interface ApiService {
             @retrofit2.http.Query("page") int page,
             @retrofit2.http.Query("limit") int limit
     );
+
+    // 7. Пошук аніме 🔍
+    @retrofit2.http.GET("search")
+    Call<java.util.List<com.example.animerecsclient.model.Anime>> searchAnime(
+            @retrofit2.http.Query("query") String query,
+            @retrofit2.http.Query("limit") int limit
+    );
 }

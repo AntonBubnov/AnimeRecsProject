@@ -37,4 +37,8 @@ public class AnimeRepository {
     public Call<java.util.List<Anime>> getLibrary(String status, int page, int limit) {
         return apiService.getLibrary(status, page, limit);
     }
+
+    public Call<java.util.List<Anime>> searchAnime(String query) {
+        return apiService.searchAnime(query, 20); // Ліміт 20 результатів
+    }
 }
