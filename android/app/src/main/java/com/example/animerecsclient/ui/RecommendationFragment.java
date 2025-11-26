@@ -51,20 +51,39 @@ public class RecommendationFragment extends Fragment {
         // 3. Ініціалізація ViewModel
         viewModel = new ViewModelProvider(this).get(RecommendationViewModel.class);
 
-        // 4. Підписка на дані
-        viewModel.getAnimeList().observe(getViewLifecycleOwner(), animeList -> {
-            // Дані прийшли!
-            progressBar.setVisibility(View.GONE); // Ховаємо спінер
-            if (animeList != null && !animeList.isEmpty()) {
-                adapter.setAnimeList(animeList); // Оновлюємо список
-                tvError.setVisibility(View.GONE);
-            } else {
-                tvError.setVisibility(View.VISIBLE);
-                tvError.setText("No recommendations yet.");
+        // 4. Налаштування Infinite Scroll
+        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
+                super.onScrolled(rv, dx, dy);
+
+                GridLayoutManager layoutManager = (GridLayoutManager) rv.getLayoutManager();
+                if (layoutManager != null) {
+                    int visibleItemCount = layoutManager.getChildCount();
+                    int totalItemCount = layoutManager.getItemCount();
+                    int firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition();
+
+                    // Якщо ми прокрутили до кінця списку і не вантажимося прямо зараз
+                    if ((visibleItemCount + firstVisibleItemPosition) >= totalItemCount
+                            && firstVisibleItemPosition >= 0
+                            && totalItemCount >= 50) { // Перевірка, що список не порожній
+
+                        viewModel.loadNextPage();
+                    }
+                }
             }
         });
 
-        // 5. Підписка на помилки
+        // 5. Підписка на дані (залишається майже без змін)
+        viewModel.getAnimeList().observe(getViewLifecycleOwner(), animeList -> {
+            progressBar.setVisibility(View.GONE);
+            if (animeList != null) { // Прибрав перевірку isEmpty(), щоб не ховати список при оновленні
+                adapter.setAnimeList(animeList);
+                tvError.setVisibility(View.GONE);
+            }
+        });
+
+        // 6. Підписка на помилки
         viewModel.getErrorMessage().observe(getViewLifecycleOwner(), error -> {
             progressBar.setVisibility(View.GONE);
             tvError.setVisibility(View.VISIBLE);

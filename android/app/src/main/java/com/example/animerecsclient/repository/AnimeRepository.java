@@ -26,7 +26,7 @@ public class AnimeRepository {
         return apiService.rateAnime(new RateRequest(animeId, ratingType));
     }
 
-    public Call<java.util.List<Anime>> getFeed() {
-        return apiService.getFeed();
+    public Call<java.util.List<Anime>> getFeed(int page, int limit) {
+        return apiService.getFeed(page, limit);
     }
 }

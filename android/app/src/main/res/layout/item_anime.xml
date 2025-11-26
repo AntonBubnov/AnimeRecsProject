@@ -43,6 +43,7 @@
                 android:layout_height="wrap_content"
                 android:text="English title"
                 android:textSize="12sp"
+                android:maxLines="2"
                 android:textColor="#757575"
                 android:layout_marginTop="4dp"/>
         </LinearLayout>

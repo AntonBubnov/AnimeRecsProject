@@ -8,6 +8,7 @@ import retrofit2.http.Body;
 import retrofit2.http.Field;
 import retrofit2.http.FormUrlEncoded;
 import retrofit2.http.POST;
+import retrofit2.http.Query;
 
 public interface ApiService {
 
@@ -24,10 +25,12 @@ public interface ApiService {
     );
 
 
-    // 3. Отримання стрічки рекомендацій 📜
-    // Заголовок Authorization додасться автоматично!
+    // 3. Отримання стрічки з пагінацією 📜
     @retrofit2.http.GET("feed")
-    Call<java.util.List<com.example.animerecsclient.model.Anime>> getFeed();
+    Call<java.util.List<com.example.animerecsclient.model.Anime>> getFeed(
+            @Query("page") int page,
+            @Query("limit") int limit
+    );
 
     // 4. Отримання аніме для оцінки ⚖️
     @retrofit2.http.GET("evaluate")
