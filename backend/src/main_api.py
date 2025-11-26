@@ -267,3 +267,37 @@ def get_anime_details(
     anime_data["user_status"] = rating.rating_type if rating else None
     
     return anime_data
+
+@app.get("/library", response_model=List[AnimeResponse])
+def get_library(
+    status: str = Query(None, description="Filter by status: LIKE, PLAN, DISLIKE, SKIP"),
+    page: int = 1,
+    limit: int = 50,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Повертає історію оцінок користувача (Закладки)"""
+    # 1. Будуємо запит до БД
+    query = db.query(models.Rating).filter(models.Rating.user_id == current_user.id)
+    
+    # Фільтрація за статусом (якщо передано)
+    if status:
+        query = query.filter(models.Rating.rating_type == status.upper())
+        
+    # Сортування: найновіші зверху
+    query = query.order_by(models.Rating.timestamp.desc())
+    
+    # Пагінація на рівні SQL
+    total = query.count()
+    ratings = query.offset((page - 1) * limit).limit(limit).all()
+    
+    # 2. Формуємо відповідь, підтягуючи дані з METADATA
+    response = []
+    for r in ratings:
+        if r.anime_id in METADATA:
+            # Використовуємо нашу допоміжну функцію
+            # Score тут не такий важливий, але можна передати 0 або реальний
+            resp_item = create_anime_response(r.anime_id)
+            response.append(resp_item)
+            
+    return response
