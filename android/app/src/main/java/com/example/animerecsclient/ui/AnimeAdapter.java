@@ -50,13 +50,13 @@ public class AnimeAdapter extends RecyclerView.Adapter<AnimeAdapter.AnimeViewHol
 
         holder.tvTitle.setText(anime.getTitle());
         // Форматуємо рейтинг (наприклад, "Score: 8.5")
-        holder.tvScore.setText(String.format("Score: %.1f", anime.getScore()));
+        holder.tvEnTitle.setText(anime.getDisplayTitle());
 
-        // Завантаження картинки
-        if (anime.getPictureUrl() != null && !anime.getPictureUrl().isEmpty()) {
+        // Використовуємо СЕРЕДНЮ картинку (для швидкості списку)
+        if (anime.getPictureMedium() != null && !anime.getPictureMedium().isEmpty()) {
             Glide.with(context)
-                    .load(anime.getPictureUrl())
-                    .centerCrop() // Обрізаємо красиво
+                    .load(anime.getPictureMedium())
+                    .centerCrop()
                     .placeholder(android.R.drawable.ic_menu_gallery)
                     .into(holder.ivPoster);
         }
@@ -71,13 +71,13 @@ public class AnimeAdapter extends RecyclerView.Adapter<AnimeAdapter.AnimeViewHol
     // Внутрішній клас, який тримає посилання на елементи View (щоб не шукати їх щоразу)
     static class AnimeViewHolder extends RecyclerView.ViewHolder {
         ImageView ivPoster;
-        TextView tvTitle, tvScore;
+        TextView tvTitle, tvEnTitle;
 
         public AnimeViewHolder(@NonNull View itemView) {
             super(itemView);
             ivPoster = itemView.findViewById(R.id.ivPoster);
             tvTitle = itemView.findViewById(R.id.tvTitle);
-            tvScore = itemView.findViewById(R.id.tvScore);
+            tvEnTitle = itemView.findViewById(R.id.tvEnTitle);
         }
     }
 }

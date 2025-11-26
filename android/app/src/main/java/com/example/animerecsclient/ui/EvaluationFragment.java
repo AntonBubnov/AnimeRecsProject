@@ -24,7 +24,7 @@ public class EvaluationFragment extends Fragment {
     private EvaluationViewModel viewModel;
 
     private ImageView ivPoster;
-    private TextView tvTitle, tvPopularity;
+    private TextView tvTitle, tvEnTitle;
     private ImageButton btnLike, btnDislike, btnSkip, btnPlan;
 
     @Nullable
@@ -40,7 +40,7 @@ public class EvaluationFragment extends Fragment {
         // 1. Ініціалізація UI
         ivPoster = view.findViewById(R.id.ivAnimePoster);
         tvTitle = view.findViewById(R.id.tvAnimeTitle);
-        tvPopularity = view.findViewById(R.id.tvAnimePopularity);
+        tvEnTitle = view.findViewById(R.id.tvAnimeEnTitle);
 
         btnLike = view.findViewById(R.id.btnLike);
         btnDislike = view.findViewById(R.id.btnDislike);
@@ -65,14 +65,16 @@ public class EvaluationFragment extends Fragment {
 
     private void updateUI(Anime anime) {
         tvTitle.setText(anime.getTitle());
-        tvPopularity.setText("Popularity: " + anime.getPopularity());
 
-        // Завантаження картинки через Glide
-        if (anime.getPictureUrl() != null && !anime.getPictureUrl().isEmpty()) {
+        // Використовуємо розумний гетер для назви
+        tvEnTitle.setText(anime.getDisplayTitle());
+
+        // Використовуємо ВЕЛИКУ картинку
+        if (anime.getPictureLarge() != null && !anime.getPictureLarge().isEmpty()) {
             Glide.with(this)
-                    .load(anime.getPictureUrl())
-                    .placeholder(android.R.drawable.ic_menu_gallery) // Картинка поки вантажиться
-                    .error(android.R.drawable.stat_notify_error)     // Якщо помилка
+                    .load(anime.getPictureLarge())
+                    .placeholder(android.R.drawable.ic_menu_gallery)
+                    .fitCenter() // Для великої картинки краще fitCenter
                     .into(ivPoster);
         }
     }

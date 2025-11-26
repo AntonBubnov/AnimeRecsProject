@@ -1,27 +1,33 @@
 package com.example.animerecsclient.model;
-
 import com.google.gson.annotations.SerializedName;
 
 public class Anime {
     private int id;
     private String title;
+
+    @SerializedName("title_en")
+    private String titleEn;     // Нове поле
+
+    @SerializedName("picture_medium")
+    private String pictureMedium; // Нове поле
+
+    @SerializedName("picture_large")
+    private String pictureLarge;  // Нове поле
+
     private int popularity;
-
-    // В Python ми назвали це 'score', 'profile_score' або просто передавали в JSON
-    // Перевірте main_api.py, там response_model=AnimeResponse
-    // AnimeResponse має поля: id, title, popularity, cluster_id, score
-
     private double score;
 
-    @SerializedName("picture")
-    private String pictureUrl; // URL картинки
-
+    // Getters
     public int getId() { return id; }
     public String getTitle() { return title; }
 
+    // Логіка: Якщо англійська назва є, повертаємо її. Якщо ні - оригінальну.
+    public String getDisplayTitle() {
+        return (titleEn != null && !titleEn.isEmpty()) ? titleEn : title;
+    }
+
+    public String getPictureMedium() { return pictureMedium; }
+    public String getPictureLarge() { return pictureLarge; }
     public int getPopularity() { return popularity; }
     public double getScore() { return score; }
-    public String getPictureUrl() {
-        return pictureUrl;
-    }
 }
