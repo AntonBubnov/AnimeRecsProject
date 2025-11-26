@@ -71,7 +71,7 @@ def load_data():
                 if alts.get("en"): titles.append(alts["en"])
                 if alts.get("ja"): titles.append(alts["ja"])
                 titles.extend(alts.get("synonyms", []))
-                SEARCH_INDEX[aid] = " | ".join(filter(None, titles))
+                SEARCH_INDEX[aid] = " | ".join(filter(None, titles)).lower()
 
     # 2. Queue
     if os.path.exists(config.QUEUE_FILE):
@@ -235,7 +235,7 @@ def search(query: str, limit: int = 10):
     
     # Використовуємо rapidfuzz для пошуку по нашому індексу
     # extract повертає список кортежів: (match_string, score, key)
-    results = process.extract(query, SEARCH_INDEX, limit=limit, scorer=fuzz.token_set_ratio)
+    results = process.extract(query.lower(), SEARCH_INDEX, limit=limit, scorer=fuzz.token_set_ratio)
     
     response = []
     for _, score, aid in results:
