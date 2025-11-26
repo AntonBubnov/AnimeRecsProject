@@ -8,8 +8,10 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ProgressBar;
+import android.app.Activity;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -61,6 +63,13 @@ public class SearchFragment extends Fragment {
             progressBar.setVisibility(loading ? View.VISIBLE : View.GONE);
         });
 
+        // Обробка натискання на фон для приховування клавіатури
+        view.findViewById(R.id.rootSearchLayout).setOnTouchListener((v, event) -> {
+            hideKeyboard(v);
+            v.clearFocus(); // Знімаємо фокус з поля пошуку
+            return false;
+        });
+
         // Слухач вводу тексту з затримкою (Debounce)
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override
@@ -79,5 +88,12 @@ public class SearchFragment extends Fragment {
                 handler.postDelayed(searchRunnable, 500);
             }
         });
+    }
+
+    private void hideKeyboard(View view) {
+        InputMethodManager imm = (InputMethodManager) requireActivity().getSystemService(Activity.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
     }
 }
