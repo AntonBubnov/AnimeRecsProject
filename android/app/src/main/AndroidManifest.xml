@@ -37,6 +37,9 @@
             android:name=".ui.MainActivity"
             android:exported="true">
         </activity>
+        <activity
+            android:name=".ui.AnimeDetailActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

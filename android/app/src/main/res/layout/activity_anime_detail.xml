@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingBottom="24dp">
+
+        <ImageView
+            android:id="@+id/ivDetailPoster"
+            android:layout_width="match_parent"
+            android:layout_height="300dp"
+            android:scaleType="centerCrop"
+            android:src="@android:drawable/ic_menu_gallery" />
+
+        <TextView
+            android:id="@+id/tvDetailTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp"
+            android:text="Title"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="#000000"/>
+
+        <TextView
+            android:id="@+id/tvUserStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="16dp"
+            android:text="Your status: None"
+            android:textColor="#6200EE"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/tvSynopsis"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp"
+            android:text="Loading details..."
+            android:textSize="16sp"
+            android:lineSpacingMultiplier="1.2"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:padding="16dp">
+
+            <Button android:id="@+id/btnDetailLike" android:text="Like" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            <Button android:id="@+id/btnDetailPlan" android:text="Plan" android:layout_marginHorizontal="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            <Button android:id="@+id/btnDetailDislike" android:text="Dislike" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+        </LinearLayout>
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

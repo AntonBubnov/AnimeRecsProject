@@ -49,7 +49,7 @@ public class AnimeAdapter extends RecyclerView.Adapter<AnimeAdapter.AnimeViewHol
         Anime anime = animeList.get(position);
 
         holder.tvTitle.setText(anime.getTitle());
-        // Форматуємо рейтинг (наприклад, "Score: 8.5")
+
         holder.tvEnTitle.setText(anime.getDisplayTitle());
 
         // Використовуємо СЕРЕДНЮ картинку (для швидкості списку)
@@ -60,6 +60,12 @@ public class AnimeAdapter extends RecyclerView.Adapter<AnimeAdapter.AnimeViewHol
                     .placeholder(android.R.drawable.ic_menu_gallery)
                     .into(holder.ivPoster);
         }
+
+        holder.itemView.setOnClickListener(v -> {
+            android.content.Intent intent = new android.content.Intent(context, AnimeDetailActivity.class);
+            intent.putExtra("ANIME_ID", anime.getId());
+            context.startActivity(intent);
+        });
     }
 
     // 3. Скільки всього елементів?
