@@ -16,7 +16,11 @@ public class AnimeDetails {
     private String synopsis;
     private double mean;
     private int rank;
-    private int popularity;
+    @SerializedName("media_type")
+    private String mediaType;
+    @SerializedName("start_season")
+    private StartSeason startSeason;
+    private List<Genre> genres; // Список жанрів
 
     @SerializedName("user_status")
     private String userStatus; // "LIKE", "PLAN", etc.
@@ -32,6 +36,18 @@ public class AnimeDetails {
         public String ja;
     }
 
+    // Внутрішній клас для сезону
+    public static class StartSeason {
+        public String season;
+        public int year;
+        public String getDisplay() { return season + " " + year; }
+    }
+
+    // Внутрішній клас для жанрів (або просто String)
+    public static class Genre {
+        public String name;
+    }
+
     // Getters
     public int getId() { return id; }
     public String getTitle() { return title; }
@@ -39,5 +55,9 @@ public class AnimeDetails {
     public String getUserStatus() { return userStatus; }
     public String getLargePicture() { return mainPicture != null ? mainPicture.large : null; }
     public String getEnglishTitle() { return (alternativeTitles != null && alternativeTitles.en != null) ? alternativeTitles.en : title; }
-    public String getScoreString() { return "Score: " + mean + " (Rank #" + rank + ")"; }
+    public String getMediaType() { return mediaType; }
+    public String getSeason() { return startSeason != null ? startSeason.getDisplay() : "N/A"; }
+    public String getRank() { return "#" + rank; }
+    public String getScore() { return String.valueOf(mean); }
+    public List<Genre> getGenres() { return genres; }
 }

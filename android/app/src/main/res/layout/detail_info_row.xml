@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:weightSum="4"
+    android:layout_marginTop="16dp">
+
+    <LinearLayout style="@style/InfoColumnStyle">
+        <TextView android:text="TYPE" style="@style/InfoLabelStyle"/>
+        <TextView android:id="@+id/tvMediaType" style="@style/InfoValueStyle"/>
+    </LinearLayout>
+
+    <LinearLayout style="@style/InfoColumnStyle">
+        <TextView android:text="SEASON" style="@style/InfoLabelStyle"/>
+        <TextView android:id="@+id/tvSeason" style="@style/InfoValueStyle"/>
+    </LinearLayout>
+
+    <LinearLayout style="@style/InfoColumnStyle">
+        <TextView android:text="RANK" style="@style/InfoLabelStyle"/>
+        <TextView android:id="@+id/tvRank" style="@style/InfoValueStyle"/>
+    </LinearLayout>
+
+    <LinearLayout style="@style/InfoColumnStyle">
+        <TextView android:text="SCORE" style="@style/InfoLabelStyle"/>
+        <TextView android:id="@+id/tvMeanScore" style="@style/InfoValueStyle"/>
+    </LinearLayout>
+
+</LinearLayout>

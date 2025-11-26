@@ -47,6 +47,19 @@ public class EvaluationFragment extends Fragment {
         btnSkip = view.findViewById(R.id.btnSkip);
         btnPlan = view.findViewById(R.id.btnPlan);
 
+        // Отримуємо кореневий View, щоб він реагував на натискання
+        View rootView = view.findViewById(R.id.fragment_root_layout);
+        if (rootView != null) {
+            rootView.setOnClickListener(v -> {
+                Anime currentAnime = viewModel.getCurrentAnime().getValue();
+                if (currentAnime != null) {
+                    android.content.Intent intent = new android.content.Intent(getContext(), AnimeDetailActivity.class);
+                    intent.putExtra("ANIME_ID", currentAnime.getId());
+                    startActivity(intent);
+                }
+            });
+        }
+
         // 2. Ініціалізація ViewModel
         viewModel = new ViewModelProvider(this).get(EvaluationViewModel.class);
 
