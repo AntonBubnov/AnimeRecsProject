@@ -1,28 +1,33 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, Query, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import json
 import os
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from pydantic import BaseModel
+from rapidfuzz import process, fuzz  # Бібліотека для нечіткого пошуку
 
 # Імпорти з наших модулів
 from .database import get_db, engine
 from . import models, auth, config
 
-# Ініціалізація додатка
-app = FastAPI(title="Anime Recommender API")
+# Створюємо таблиці при старті (для Render)
+models.Base.metadata.create_all(bind=engine)
 
-# Налаштування OAuth2 (вказуємо ендпоінт для отримання токена)
+app = FastAPI(title="Anime Recommender API")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-# --- ГЛОБАЛЬНІ ЗМІННІ (IN-MEMORY STORAGE) ---
-METADATA: Dict = {}        # {anime_id: {title, popularity...}}
-EVALUATION_QUEUE: List = [] # [{id, cluster_id, ...}, ...]
-GRAPH_ADJ: Dict = {}       # {source_id: {target_id: weight, ...}}
+# --- ГЛОБАЛЬНІ ЗМІННІ ---
+# Тепер METADATA зберігає повний об'єкт з metadata.json
+METADATA: Dict[int, Dict[str, Any]] = {} 
+EVALUATION_QUEUE: List[Dict] = [] 
+GRAPH_ADJ: Dict = {} 
 
-# --- МОДЕЛІ Pydantic (для валідації JSON) ---
+# Для пошуку: словник {id: "Title English Title Synonyms"}
+SEARCH_INDEX: Dict[int, str] = {}
+
+# --- МОДЕЛІ Pydantic ---
 class UserCreate(BaseModel):
     username: str
     password: str
@@ -31,51 +36,49 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
+class RateRequest(BaseModel):
+    anime_id: int
+    rating_type: str 
+
+# Оновлена модель відповіді (Light Model)
 class AnimeResponse(BaseModel):
     id: int
     title: str
+    title_en: str          # Нове поле: Англійська назва
+    picture_medium: str    # Нове поле: Картинка для карток
+    picture_large: str     # Нове поле: Картинка для оцінювання
     popularity: int
-    picture: str = ""  # <-- ДОДАНО ЦЕ ПОЛЕ
+    score: float = 0.0     # ProfileScore
     cluster_id: Optional[int] = None
-    score: Optional[float] = 0.0
-
-class RateRequest(BaseModel):
-    anime_id: int
-    rating_type: str  # 'LIKE', 'DISLIKE', 'SKIP', 'PLAN'
 
 # --- ЗАВАНТАЖЕННЯ ДАНИХ ---
 @app.on_event("startup")
 def load_data():
-    global METADATA, EVALUATION_QUEUE, GRAPH_ADJ
-    
-    # Автоматично створюємо таблиці, якщо їх немає (для PostgreSQL на Render)
-    models.Base.metadata.create_all(bind=engine)
-    
+    global METADATA, EVALUATION_QUEUE, GRAPH_ADJ, SEARCH_INDEX
     print("Завантаження даних у пам'ять...")
     
-    # 1. Metadata
+    # 1. Metadata (Повне завантаження)
     if os.path.exists(config.METADATA_FILE):
         with open(config.METADATA_FILE, 'r', encoding='utf-8') as f:
             raw_meta = json.load(f)
-            # Спрощуємо структуру для швидкого доступу
-            for aid, data in raw_meta.items():
-                # Витягуємо URL картинки (medium size)
-                #pic_url = data.get("main_picture", {}).get("medium", "")
-                main_pic = data.get("main_picture", {})
-                pic_url = main_pic.get("large") or main_pic.get("medium", "")
+            for aid_str, data in raw_meta.items():
+                aid = int(aid_str)
+                METADATA[aid] = data # Зберігаємо все як є
+                
+                # Будуємо індекс для пошуку (об'єднуємо всі назви в один рядок)
+                titles = [data.get("title", "")]
+                alts = data.get("alternative_titles", {})
+                if alts.get("en"): titles.append(alts["en"])
+                if alts.get("ja"): titles.append(alts["ja"])
+                titles.extend(alts.get("synonyms", []))
+                SEARCH_INDEX[aid] = " | ".join(filter(None, titles))
 
-                METADATA[int(aid)] = {
-                    "title": data.get("title", "Unknown"),
-                    "popularity": data.get("members", 0) or data.get("num_list_users", 0),
-                    "picture": pic_url  # <-- ЗБЕРІГАЄМО КАРТИНКУ
-                }
-    
     # 2. Queue
     if os.path.exists(config.QUEUE_FILE):
         with open(config.QUEUE_FILE, 'r', encoding='utf-8') as f:
             EVALUATION_QUEUE = json.load(f)
             
-    # 3. Graph (Edges) -> Adjacency List
+    # 3. Graph
     if os.path.exists(config.EDGES_FILE):
         with open(config.EDGES_FILE, 'r', encoding='utf-8') as f:
             edges = json.load(f)
@@ -83,15 +86,13 @@ def load_data():
                 src, tgt, w = e['source'], e['target'], e['weight']
                 if src not in GRAPH_ADJ: GRAPH_ADJ[src] = {}
                 if tgt not in GRAPH_ADJ: GRAPH_ADJ[tgt] = {}
-                # Граф неорієнтований, додаємо в обидва боки
                 GRAPH_ADJ[src][tgt] = w
                 GRAPH_ADJ[tgt][src] = w
                 
-    print(f"Дані завантажено! Аніме: {len(METADATA)}, Ребер: {len(edges) if 'edges' in locals() else 0}")
+    print(f"Дані завантажено! Аніме: {len(METADATA)}")
 
 # --- ДОПОМІЖНІ ФУНКЦІЇ ---
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    """Перевірка токена і отримання поточного користувача"""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -100,191 +101,145 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     try:
         payload = auth.jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
         username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
+        if username is None: raise credentials_exception
     except auth.jwt.JWTError:
-        raise credentials_exception
-        
+        raise credentials_exception 
     user = db.query(models.User).filter(models.User.username == username).first()
-    if user is None:
-        raise credentials_exception
+    if user is None: raise credentials_exception
     return user
 
-# --- ENDPOINTS: AUTH ---
+def create_anime_response(aid: int, score: float = 0.0, cluster_id: int = None) -> AnimeResponse:
+    """Створює об'єкт відповіді з правильними полями"""
+    data = METADATA.get(aid, {})
+    
+    # Витягуємо назви та картинки з безпечним fallback
+    title_en = data.get("alternative_titles", {}).get("en") or data.get("title", "Unknown")
+    pics = data.get("main_picture", {})
+    pic_med = pics.get("medium", "")
+    pic_large = pics.get("large") or pic_med # Якщо large немає, беремо medium
+    
+    # Популярність (кількість users)
+    pop = data.get("num_list_users", 0) or data.get("members", 0)
+
+    return AnimeResponse(
+        id=aid,
+        title=data.get("title", "Unknown"),
+        title_en=title_en,
+        picture_medium=pic_med,
+        picture_large=pic_large,
+        popularity=pop,
+        score=score,
+        cluster_id=cluster_id
+    )
+
+# --- ENDPOINTS ---
 
 @app.post("/register", response_model=Token)
 def register(user: UserCreate, db: Session = Depends(get_db)):
-    # Перевірка чи існує юзер
     db_user = db.query(models.User).filter(models.User.username == user.username).first()
-    if db_user:
-        raise HTTPException(status_code=400, detail="Username already registered")
-    
-    # Створення юзера
+    if db_user: raise HTTPException(status_code=400, detail="Username already registered")
     hashed_pw = auth.get_password_hash(user.password)
     new_user = models.User(username=user.username, password_hash=hashed_pw)
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    
-    # Видача токена одразу
     access_token = auth.create_access_token(data={"sub": new_user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
 @app.post("/token", response_model=Token)
-def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.username == form_data.username).first()
     if not user or not auth.verify_password(form_data.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
+        raise HTTPException(status_code=401, detail="Incorrect username or password")
     access_token = auth.create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
-# --- ENDPOINTS: CORE LOGIC ---
-
 @app.post("/rate")
-def rate_anime(
-    rate_req: RateRequest, 
-    current_user: models.User = Depends(get_current_user), 
-    db: Session = Depends(get_db)
-):
-    """Зберігає оцінку користувача"""
-    # Перевіряємо, чи оцінював він це раніше
-    existing_rating = db.query(models.Rating).filter(
-        models.Rating.user_id == current_user.id,
-        models.Rating.anime_id == rate_req.anime_id
-    ).first()
-    
-    if existing_rating:
-        # Оновлюємо існуючу
-        existing_rating.rating_type = rate_req.rating_type
-        existing_rating.timestamp = datetime.utcnow()
+def rate_anime(req: RateRequest, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    existing = db.query(models.Rating).filter(models.Rating.user_id == current_user.id, models.Rating.anime_id == req.anime_id).first()
+    if existing:
+        existing.rating_type = req.rating_type
+        existing.timestamp = datetime.utcnow()
     else:
-        # Створюємо нову
-        new_rating = models.Rating(
-            user_id=current_user.id,
-            anime_id=rate_req.anime_id,
-            rating_type=rate_req.rating_type
-        )
+        new_rating = models.Rating(user_id=current_user.id, anime_id=req.anime_id, rating_type=req.rating_type)
         db.add(new_rating)
-    
     db.commit()
-    return {"status": "ok", "message": "Rating saved"}
+    return {"status": "ok"}
 
 @app.get("/evaluate", response_model=AnimeResponse)
-def get_evaluation_item(
-    current_user: models.User = Depends(get_current_user), 
-    db: Session = Depends(get_db)
-):
-    """
-    Повертає одне аніме з черги для оцінки.
-    Реалізує 'Smart Logic' для повернення SKIP/PLAN.
-    """
-    # 1. Отримуємо всі оцінки користувача
+def get_evaluation_item(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     user_ratings = db.query(models.Rating).filter(models.Rating.user_id == current_user.id).all()
-    
-    # 2. Формуємо список ID, які треба виключити ПРЯМО ЗАРАЗ
     exclude_ids = set()
     now = datetime.utcnow()
-    
     for r in user_ratings:
-        if r.rating_type in ['LIKE', 'DISLIKE']:
-            exclude_ids.add(r.anime_id)
-        
-        elif r.rating_type == 'PLAN':
-            # Ховаємо, якщо пройшло менше 7 днів
-            if now - r.timestamp < timedelta(days=7):
-                exclude_ids.add(r.anime_id)
-                
-        elif r.rating_type == 'SKIP':
-            # Ховаємо, якщо пройшло менше 30 днів
-            if now - r.timestamp < timedelta(days=30):
-                exclude_ids.add(r.anime_id)
+        if r.rating_type in ['LIKE', 'DISLIKE']: exclude_ids.add(r.anime_id)
+        elif r.rating_type == 'PLAN' and (now - r.timestamp < timedelta(days=7)): exclude_ids.add(r.anime_id)
+        elif r.rating_type == 'SKIP' and (now - r.timestamp < timedelta(days=30)): exclude_ids.add(r.anime_id)
     
-    # 3. Шукаємо перше аніме в черзі, якого немає в exclude_ids
     for item in EVALUATION_QUEUE:
-        if item['id'] not in exclude_ids:
-            # Знайшли! Повертаємо дані з метаданих (бо в черзі може бути не все)
-            meta = METADATA.get(item['id'], {})
-            return {
-                "id": item['id'],
-                "title": meta.get("title", item['title']),
-                "popularity": item['popularity'],
-                "picture": meta.get("picture", ""), # <-- ДОДАНО
-                "cluster_id": item.get("cluster_id")
-            }
+        if item['id'] not in exclude_ids and item['id'] in METADATA:
+            return create_anime_response(item['id'], cluster_id=item.get('cluster_id'))
             
-    # Якщо черга скінчилась (ого!)
     raise HTTPException(status_code=404, detail="No more anime to evaluate!")
 
 @app.get("/feed", response_model=List[AnimeResponse])
 def get_recommendation_feed(
-    limit: int = 20,
+    page: int = 1,          # Номер сторінки
+    limit: int = 50,        # Кількість на сторінці
     current_user: models.User = Depends(get_current_user), 
     db: Session = Depends(get_db)
 ):
-    """
-    Генерує персональну стрічку рекомендацій.
-    Стратегія: Global Ranking (всі неоцінені аніме сортуються за Score + Popularity).
-    """
-    # 1. Отримуємо оцінки користувача
     user_ratings = db.query(models.Rating).filter(models.Rating.user_id == current_user.id).all()
+    rated_ids = {r.anime_id for r in user_ratings if r.rating_type in ['LIKE', 'DISLIKE', 'PLAN']}
     
-    # Створюємо "чорний список" ID, які ми точно не хочемо показувати.
-    # (Виключаємо LIKE, DISLIKE, PLAN. Аніме зі статусом SKIP залишаються кандидатами)
-    rated_ids = {
-        r.anime_id for r in user_ratings 
-        if r.rating_type in ['LIKE', 'DISLIKE', 'PLAN']
-    }
-    
-    # 2. Розрахунок ProfileScore (поширення впливу по графу)
-    scores = {} 
-    
+    # Розрахунок Score
+    scores = {}
     for r in user_ratings:
         if r.anime_id not in GRAPH_ADJ: continue
-        
-        impact = 0.0
-        if r.rating_type == 'LIKE': impact = 1.0
-        elif r.rating_type == 'DISLIKE': impact = -1.0
-        elif r.rating_type == 'PLAN': impact = 0.2
-        
+        impact = 1.0 if r.rating_type == 'LIKE' else (-1.0 if r.rating_type == 'DISLIKE' else (0.2 if r.rating_type == 'PLAN' else 0))
         if impact == 0: continue
-            
-        neighbors = GRAPH_ADJ[r.anime_id]
-        for neighbor_id, weight in neighbors.items():
-            # Ми не перевіряємо rated_ids тут, щоб коректно порахувати всі впливи,
-            # фільтрацію зробимо на етапі формування списку кандидатів.
+        for neighbor_id, weight in GRAPH_ADJ[r.anime_id].items():
             scores[neighbor_id] = scores.get(neighbor_id, 0.0) + (impact * weight)
 
-    # 3. Формуємо повний список кандидатів з УСІХ метаданих
+    # Формуємо повний список кандидатів
+    # Оптимізація: для пагінації нам все одно треба відсортувати все, 
+    # але ми створюємо повні об'єкти AnimeResponse тільки для потрібної сторінки
+    
     candidates = []
+    for aid in METADATA:
+        if aid in rated_ids: continue
+        # Зберігаємо кортеж (score, popularity, id) для сортування
+        sc = scores.get(aid, 0.0)
+        pop = METADATA[aid].get("num_list_users", 0)
+        candidates.append((sc, pop, aid))
     
-    for aid, meta in METADATA.items():
-        # Відсіюємо ті, що вже оцінені (крім SKIP)
-        if aid in rated_ids:
-            continue
-            
-        # Отримуємо розрахований score або 0.0
-        score = scores.get(aid, 0.0)
+    # Сортування
+    candidates.sort(key=lambda x: (x[0], x[1]), reverse=True)
+    
+    # Пагінація (Slicing)
+    start = (page - 1) * limit
+    end = start + limit
+    page_items = candidates[start:end]
+    
+    # Формування фінальної відповіді
+    result = []
+    for sc, pop, aid in page_items:
+        result.append(create_anime_response(aid, score=sc))
         
-        candidates.append({
-            "id": aid,
-            "title": meta['title'],
-            "popularity": meta['popularity'],
-            "score": score,
-            "picture": meta.get("picture", ""), # <-- ДОДАНО
-            # Якщо в метаданих немає кластера, ставимо None (це не критично для сортування)
-            "cluster_id": None 
-        })
-            
-    # 4. Глобальне сортування
-    # Ключ: 
-    #  1. Score (від більшого до меншого). Позитивні -> Нуль -> Негативні.
-    #  2. Popularity (від більшого до меншого). При рівних Score перемагає популярність.
-    candidates.sort(key=lambda x: (x['score'], x['popularity']), reverse=True)
+    return result
+
+@app.get("/search", response_model=List[AnimeResponse])
+def search(query: str, limit: int = 10):
+    """Пошук аніме за назвою (Fuzzy Search)"""
+    if not query: return []
     
-    # 5. Повертаємо зріз (Pagination support)
-    return candidates[:limit]
+    # Використовуємо rapidfuzz для пошуку по нашому індексу
+    # extract повертає список кортежів: (match_string, score, key)
+    results = process.extract(query, SEARCH_INDEX, limit=limit, scorer=fuzz.token_set_ratio)
+    
+    response = []
+    for _, score, aid in results:
+        if score > 50: # Поріг схожості
+            response.append(create_anime_response(aid, score=0.0)) # Score тут не важливий
+            
+    return response
