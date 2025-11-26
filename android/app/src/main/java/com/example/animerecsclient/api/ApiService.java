@@ -40,4 +40,7 @@ public interface ApiService {
     // Створимо ще один клас RateRequest в model, якщо треба, або передамо як об'єкт
     @retrofit2.http.POST("rate")
     Call<Void> rateAnime(@Body com.example.animerecsclient.model.RateRequest request);
+
+    @retrofit2.http.GET("anime/{id}")
+    Call<com.example.animerecsclient.model.AnimeDetails> getAnimeDetails(@retrofit2.http.Path("id") int id);
 }

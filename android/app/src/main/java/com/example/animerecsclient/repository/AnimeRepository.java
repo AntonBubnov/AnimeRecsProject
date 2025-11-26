@@ -29,4 +29,8 @@ public class AnimeRepository {
     public Call<java.util.List<Anime>> getFeed(int page, int limit) {
         return apiService.getFeed(page, limit);
     }
+
+    public Call<com.example.animerecsclient.model.AnimeDetails> getAnimeDetails(int id) {
+        return apiService.getAnimeDetails(id);
+    }
 }
