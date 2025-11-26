@@ -43,4 +43,11 @@ public interface ApiService {
 
     @retrofit2.http.GET("anime/{id}")
     Call<com.example.animerecsclient.model.AnimeDetails> getAnimeDetails(@retrofit2.http.Path("id") int id);
+
+    @retrofit2.http.GET("library")
+    Call<java.util.List<com.example.animerecsclient.model.Anime>> getLibrary(
+            @retrofit2.http.Query("status") String status,
+            @retrofit2.http.Query("page") int page,
+            @retrofit2.http.Query("limit") int limit
+    );
 }

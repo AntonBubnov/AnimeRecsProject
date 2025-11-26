@@ -33,4 +33,8 @@ public class AnimeRepository {
     public Call<com.example.animerecsclient.model.AnimeDetails> getAnimeDetails(int id) {
         return apiService.getAnimeDetails(id);
     }
+
+    public Call<java.util.List<Anime>> getLibrary(String status, int page, int limit) {
+        return apiService.getLibrary(status, page, limit);
+    }
 }
