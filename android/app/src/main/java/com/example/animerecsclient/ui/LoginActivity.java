@@ -39,6 +39,13 @@ public class LoginActivity extends AppCompatActivity {
             getSupportActionBar().setTitle(""); // Прибираємо заголовок
         }
 
+        // Обробка натискання на фон
+        findViewById(R.id.rootLayout).setOnTouchListener((v, event) -> {
+            hideKeyboard(v);
+            v.clearFocus(); // Додатково знімаємо фокус з поля вводу
+            return false;
+        });
+
         sessionManager = new SessionManager(this);
 
         etUsername = findViewById(R.id.etLoginUsername);
@@ -46,6 +53,7 @@ public class LoginActivity extends AppCompatActivity {
         btnLogin = findViewById(R.id.btnDoLogin);
 
         btnLogin.setOnClickListener(v -> performLogin());
+
     }
 
     @Override
@@ -89,6 +97,13 @@ public class LoginActivity extends AppCompatActivity {
                         Toast.makeText(LoginActivity.this, "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 });
+    }
+
+    private void hideKeyboard(android.view.View view) {
+        android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(android.app.Activity.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
     }
 
 }
