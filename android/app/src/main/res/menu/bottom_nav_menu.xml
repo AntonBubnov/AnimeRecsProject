@@ -9,4 +9,8 @@
         android:id="@+id/nav_feed"
         android:title="For You"
         android:icon="@android:drawable/ic_menu_view" />
+    <item
+        android:id="@+id/nav_library"
+        android:title="Library"
+        android:icon="@android:drawable/ic_menu_sort_by_size" />
 </menu>
