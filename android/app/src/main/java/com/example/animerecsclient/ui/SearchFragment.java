@@ -70,6 +70,13 @@ public class SearchFragment extends Fragment {
             return false;
         });
 
+        // Обробка натискання на фон для приховування клавіатури
+        view.findViewById(R.id.rvSearchResults).setOnTouchListener((v, event) -> {
+            hideKeyboard(v);
+            v.clearFocus(); // Знімаємо фокус з поля пошуку
+            return false;
+        });
+
         // Слухач вводу тексту з затримкою (Debounce)
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override
