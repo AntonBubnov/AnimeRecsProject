@@ -38,6 +38,8 @@ public class MainActivity extends AppCompatActivity {
                 selectedFragment = new RecommendationFragment();
             } else if (itemId == R.id.nav_library) {
                 selectedFragment = new LibraryFragment();
+            }else if (itemId == R.id.nav_search) {
+                selectedFragment = new SearchFragment();
             }
 
             if (selectedFragment != null) {
