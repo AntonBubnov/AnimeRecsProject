@@ -243,3 +243,27 @@ def search(query: str, limit: int = 10):
             response.append(create_anime_response(aid, score=0.0)) # Score тут не важливий
             
     return response
+
+@app.get("/anime/{anime_id}", response_model=Dict[str, Any])
+def get_anime_details(
+    anime_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Отримання повної інформації про аніме"""
+    if anime_id not in METADATA:
+        raise HTTPException(status_code=404, detail="Anime not found")
+    
+    # Беремо повні метадані
+    anime_data = METADATA[anime_id].copy()
+    anime_data["id"] = anime_id
+    
+    # Додаємо поточну оцінку користувача (якщо є)
+    rating = db.query(models.Rating).filter(
+        models.Rating.user_id == current_user.id,
+        models.Rating.anime_id == anime_id
+    ).first()
+    
+    anime_data["user_status"] = rating.rating_type if rating else None
+    
+    return anime_data
