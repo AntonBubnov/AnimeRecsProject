@@ -57,4 +57,14 @@ public interface ApiService {
             @retrofit2.http.Query("query") String query,
             @retrofit2.http.Query("limit") int limit
     );
+
+    // 8. Отримання констант (жанри, типи)
+    @retrofit2.http.GET("meta/constants")
+    Call<com.example.animerecsclient.model.AppConstants> getConstants();
+
+    // 9. Розширений пошук
+    @retrofit2.http.POST("search/advanced")
+    Call<java.util.List<com.example.animerecsclient.model.Anime>> searchAdvanced(
+            @Body com.example.animerecsclient.model.FilterRequest request
+    );
 }

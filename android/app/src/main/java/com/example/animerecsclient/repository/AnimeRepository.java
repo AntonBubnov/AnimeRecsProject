@@ -41,4 +41,12 @@ public class AnimeRepository {
     public Call<java.util.List<Anime>> searchAnime(String query) {
         return apiService.searchAnime(query, 20); // Ліміт 20 результатів
     }
+
+    public Call<com.example.animerecsclient.model.AppConstants> getConstants() {
+        return apiService.getConstants();
+    }
+
+    public Call<java.util.List<Anime>> searchAdvanced(com.example.animerecsclient.model.FilterRequest request) {
+        return apiService.searchAdvanced(request);
+    }
 }
