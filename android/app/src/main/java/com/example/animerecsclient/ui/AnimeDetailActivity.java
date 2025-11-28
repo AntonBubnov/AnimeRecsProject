@@ -7,6 +7,12 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import com.example.animerecsclient.ui.HorizontalAnimeAdapter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
@@ -23,6 +29,8 @@ public class AnimeDetailActivity extends AppCompatActivity {
     private TextView tvMainTitle, tvEnglishTitle, tvSynopsis, tvShowMore, tvUserStatus;
     private TextView tvMediaType, tvSeason, tvRank, tvMeanScore, tvGenres;
     private ImageView ivPoster;
+    private HorizontalAnimeAdapter relatedAdapter;
+    private HorizontalAnimeAdapter recommendationsAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,7 +56,14 @@ public class AnimeDetailActivity extends AppCompatActivity {
         viewModel.loadDetails(animeId);
 
         // --- Підписка на дані ---
-        viewModel.getAnimeDetails().observe(this, this::updateUI);
+        // Налаштування каруселей
+        setupCarousels();
+
+        // ... (viewModel init) ...
+        viewModel.getAnimeDetails().observe(this, details -> {
+            updateUI(details);
+            updateCarousels(details);
+        });
 
         // --- Кнопки ---
         setupButtons();
@@ -130,5 +145,50 @@ public class AnimeDetailActivity extends AppCompatActivity {
 
         // Картинка
         Glide.with(this).load(details.getLargePicture()).into(ivPoster);
+    }
+
+    private void setupCarousels() {
+        RecyclerView rvRelated = findViewById(R.id.rvRelatedAnime);
+        RecyclerView rvRecs = findViewById(R.id.rvRecommendations);
+
+        rvRelated.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        rvRecs.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+
+        relatedAdapter = new HorizontalAnimeAdapter(this);
+        recommendationsAdapter = new HorizontalAnimeAdapter(this);
+
+        rvRelated.setAdapter(relatedAdapter);
+        rvRecs.setAdapter(recommendationsAdapter);
+    }
+
+    private void updateCarousels(AnimeDetails details) {
+        // 1. Related Anime
+        List<HorizontalAnimeAdapter.DisplayItem> relatedItems = new ArrayList<>();
+        if (details.getRelatedAnime() != null) {
+            for (AnimeDetails.RelatedEntry entry : details.getRelatedAnime()) {
+                if (entry.node == null) continue;
+                String pic = (entry.node.mainPicture != null) ? entry.node.mainPicture.medium : null;
+                relatedItems.add(new HorizontalAnimeAdapter.DisplayItem(
+                        entry.node.id, entry.node.title, pic, entry.relationType
+                ));
+            }
+        }
+        relatedAdapter.setItems(relatedItems);
+
+        // 2. Recommendations (Сортування)
+        List<HorizontalAnimeAdapter.DisplayItem> recItems = new ArrayList<>();
+        if (details.getRecommendations() != null) {
+            // Сортуємо: більше рекомендацій -> вище
+            Collections.sort(details.getRecommendations(), (a, b) -> b.numRecommendations - a.numRecommendations);
+
+            for (AnimeDetails.RecommendationEntry entry : details.getRecommendations()) {
+                if (entry.node == null) continue;
+                String pic = (entry.node.mainPicture != null) ? entry.node.mainPicture.medium : null;
+                recItems.add(new HorizontalAnimeAdapter.DisplayItem(
+                        entry.node.id, entry.node.title, pic, entry.numRecommendations + " Users"
+                ));
+            }
+        }
+        recommendationsAdapter.setItems(recItems);
     }
 }
