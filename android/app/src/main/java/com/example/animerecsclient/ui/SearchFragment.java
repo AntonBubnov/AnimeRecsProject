@@ -20,6 +20,10 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.animerecsclient.R;
 import com.example.animerecsclient.viewmodel.SearchViewModel;
+import com.example.animerecsclient.ui.bottomsheet.FilterBottomSheet;
+import com.example.animerecsclient.ui.bottomsheet.SortingBottomSheet;
+import com.example.animerecsclient.model.AppConstants;
+import com.example.animerecsclient.model.FilterRequest;
 
 public class SearchFragment extends Fragment {
 
@@ -75,6 +79,30 @@ public class SearchFragment extends Fragment {
             hideKeyboard(v);
             v.clearFocus(); // Знімаємо фокус з поля пошуку
             return false;
+        });
+
+        // Кнопка Фільтрів
+        view.findViewById(R.id.btnFilter).setOnClickListener(v -> {
+            AppConstants constants = viewModel.getConstants().getValue();
+            FilterRequest current = viewModel.getCurrentFilter();
+
+            FilterBottomSheet sheet = new FilterBottomSheet(current, constants, newFilter -> {
+                viewModel.searchAdvanced(newFilter);
+            });
+            sheet.show(getParentFragmentManager(), "FilterSheet");
+        });
+
+        // Кнопка Сортування
+        view.findViewById(R.id.btnSort).setOnClickListener(v -> {
+            FilterRequest current = viewModel.getCurrentFilter();
+
+            SortingBottomSheet sheet = new SortingBottomSheet(current, (sortBy, sortOrder) -> {
+                // Оновлюємо тільки поля сортування в поточному запиті
+                current.sortBy = sortBy;
+                current.sortOrder = sortOrder;
+                viewModel.searchAdvanced(current);
+            });
+            sheet.show(getParentFragmentManager(), "SortSheet");
         });
 
         // Слухач вводу тексту з затримкою (Debounce)
