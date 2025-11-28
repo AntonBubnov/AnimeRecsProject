@@ -14,14 +14,21 @@ import com.example.animerecsclient.R;
 import java.util.ArrayList;
 import java.util.List;
 
-public class HorizontalAnimeAdapter extends RecyclerView.Adapter<HorizontalAnimeAdapter.ViewHolder> {
+public class HorizontalAnimeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    // Проста внутрішня модель для відображення
+    private static final int TYPE_ITEM = 0;
+    private static final int TYPE_MORE = 1;
+
+    // Інтерфейс для кліку на "Show More"
+    public interface OnShowMoreClickListener {
+        void onShowMore();
+    }
+
     public static class DisplayItem {
         int id;
         String title;
         String imageUrl;
-        String subtitle; // "Sequel" або "15 Recs"
+        String subtitle;
 
         public DisplayItem(int id, String title, String imageUrl, String subtitle) {
             this.id = id;
@@ -33,52 +40,88 @@ public class HorizontalAnimeAdapter extends RecyclerView.Adapter<HorizontalAnime
 
     private List<DisplayItem> items = new ArrayList<>();
     private Context context;
+    private boolean showMoreEnabled = false; // Чи показувати стрілку?
+    private OnShowMoreClickListener moreListener;
 
     public HorizontalAnimeAdapter(Context context) {
         this.context = context;
     }
 
-    public void setItems(List<DisplayItem> items) {
+    public void setItems(List<DisplayItem> items, boolean enableShowMore, OnShowMoreClickListener listener) {
         this.items = items;
+        this.showMoreEnabled = enableShowMore;
+        this.moreListener = listener;
         notifyDataSetChanged();
+    }
+
+    // Перевантаження для сумісності зі старим кодом (де немає Show More)
+    public void setItems(List<DisplayItem> items) {
+        setItems(items, false, null);
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+        if (showMoreEnabled && position == items.size()) {
+            return TYPE_MORE;
+        }
+        return TYPE_ITEM;
     }
 
     @NonNull
     @Override
-    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_anime_horizontal, parent, false);
-        return new ViewHolder(view);
-    }
-
-    @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        DisplayItem item = items.get(position);
-        holder.tvTitle.setText(item.title);
-        holder.tvSubtitle.setText(item.subtitle);
-
-        if (item.imageUrl != null) {
-            Glide.with(context).load(item.imageUrl).centerCrop().into(holder.ivPoster);
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        if (viewType == TYPE_MORE) {
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_view_more, parent, false);
+            return new MoreViewHolder(view);
+        } else {
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_anime_horizontal, parent, false);
+            return new ItemViewHolder(view);
         }
-
-        holder.itemView.setOnClickListener(v -> {
-            Intent intent = new Intent(context, AnimeDetailActivity.class);
-            intent.putExtra("ANIME_ID", item.id);
-            context.startActivity(intent);
-        });
     }
 
     @Override
-    public int getItemCount() { return items.size(); }
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+        if (holder instanceof ItemViewHolder) {
+            DisplayItem item = items.get(position);
+            ItemViewHolder itemHolder = (ItemViewHolder) holder;
 
-    static class ViewHolder extends RecyclerView.ViewHolder {
+            itemHolder.tvTitle.setText(item.title);
+            itemHolder.tvSubtitle.setText(item.subtitle);
+            if (item.imageUrl != null) {
+                Glide.with(context).load(item.imageUrl).centerCrop().into(itemHolder.ivPoster);
+            }
+
+            itemHolder.itemView.setOnClickListener(v -> {
+                Intent intent = new Intent(context, AnimeDetailActivity.class);
+                intent.putExtra("ANIME_ID", item.id);
+                context.startActivity(intent);
+            });
+        } else if (holder instanceof MoreViewHolder) {
+            holder.itemView.setOnClickListener(v -> {
+                if (moreListener != null) moreListener.onShowMore();
+            });
+        }
+    }
+
+    @Override
+    public int getItemCount() {
+        return items.size() + (showMoreEnabled ? 1 : 0);
+    }
+
+    static class ItemViewHolder extends RecyclerView.ViewHolder {
         ImageView ivPoster;
         TextView tvTitle, tvSubtitle;
-        public ViewHolder(View itemView) {
+        public ItemViewHolder(View itemView) {
             super(itemView);
             ivPoster = itemView.findViewById(R.id.ivPoster);
             tvTitle = itemView.findViewById(R.id.tvTitle);
             tvSubtitle = itemView.findViewById(R.id.tvSubtitle);
+        }
+    }
+
+    static class MoreViewHolder extends RecyclerView.ViewHolder {
+        public MoreViewHolder(View itemView) {
+            super(itemView);
         }
     }
 }
