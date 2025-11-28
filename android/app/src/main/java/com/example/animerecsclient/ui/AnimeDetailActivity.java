@@ -3,6 +3,8 @@ package com.example.animerecsclient.ui;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.MenuItem;
+import android.view.Menu;
+import com.bumptech.glide.request.RequestOptions;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -13,6 +15,7 @@ import com.example.animerecsclient.ui.HorizontalAnimeAdapter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import android.content.Intent;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
@@ -29,6 +32,7 @@ public class AnimeDetailActivity extends AppCompatActivity {
     private TextView tvMainTitle, tvEnglishTitle, tvSynopsis, tvShowMore, tvUserStatus;
     private TextView tvMediaType, tvSeason, tvRank, tvMeanScore, tvGenres;
     private ImageView ivPoster;
+    private ImageView ivBackgroundBlur;
     private HorizontalAnimeAdapter relatedAdapter;
     private HorizontalAnimeAdapter recommendationsAdapter;
 
@@ -62,6 +66,10 @@ public class AnimeDetailActivity extends AppCompatActivity {
         // ... (viewModel init) ...
         viewModel.getAnimeDetails().observe(this, details -> {
             updateUI(details);
+            // Окремо вантажимо фон з ефектом розмиття (опціонально)
+            // Glide.with(this).load(details.getLargePicture()).apply(RequestOptions.bitmapTransform(new BlurTransformation(25, 3))).into(ivBackgroundBlur);
+            // Простіший варіант без сторонніх бібліотек (ми вже задали alpha і темний фон в XML):
+            Glide.with(this).load(details.getLargePicture()).into(ivBackgroundBlur);
             updateCarousels(details);
         });
 
@@ -69,11 +77,27 @@ public class AnimeDetailActivity extends AppCompatActivity {
         setupButtons();
     }
 
-    // Обробка стрілки "Назад"
+    // Додаємо меню в Toolbar
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.detail_menu, menu);
+        return true;
+    }
+
+    // Обробка натискань на кнопки меню
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
+            // Стрілка "Назад" - стандартна поведінка
             onBackPressed();
+            return true;
+        } else if (item.getItemId() == R.id.action_close) {
+            // Хрестик "Закрити" - повне закриття стеку деталей
+            //finishAffinity(); // Закриває цю Activity і всі батьківські в цьому таску
+            // АБО, якщо хочете повернутися саме на MainActivity:
+            Intent intent = new Intent(this, MainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            startActivity(intent);
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -82,6 +106,7 @@ public class AnimeDetailActivity extends AppCompatActivity {
     // Внутрішні методи для організації коду
     private void initializeViews() {
         // Замініть ці findViewById на ваші реальні ID з layout
+        ivBackgroundBlur = findViewById(R.id.ivBackgroundBlur);
         tvMainTitle = findViewById(R.id.tvMainTitle);
         tvEnglishTitle = findViewById(R.id.tvEnglishTitle);
         tvSynopsis = findViewById(R.id.tvSynopsis);
