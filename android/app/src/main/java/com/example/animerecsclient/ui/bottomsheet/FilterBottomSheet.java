@@ -17,7 +17,6 @@ import com.example.animerecsclient.model.FilterRequest;
 import com.example.animerecsclient.ui.adapter.FilterOptionsAdapter;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 public class FilterBottomSheet extends BottomSheetDialogFragment {
@@ -37,7 +36,8 @@ public class FilterBottomSheet extends BottomSheetDialogFragment {
     }
 
     public FilterBottomSheet(FilterRequest filter, AppConstants constants, OnFilterAppliedListener listener) {
-        this.filter = filter.copy(); // Працюємо з копією, щоб не ламати оригінал до натискання Apply
+        // Важливо: перевірка на null
+        this.filter = (filter != null) ? filter.copy() : new FilterRequest();
         this.constants = constants;
         this.listener = listener;
     }
@@ -50,7 +50,6 @@ public class FilterBottomSheet extends BottomSheetDialogFragment {
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        // Ініціалізація UI
         RecyclerView rvGenres = view.findViewById(R.id.rvGenres);
         RecyclerView rvMedia = view.findViewById(R.id.rvMediaTypes);
         cbStrict = view.findViewById(R.id.cbStrictGenres);
@@ -61,54 +60,53 @@ public class FilterBottomSheet extends BottomSheetDialogFragment {
 
         // Налаштування адаптерів
         if (constants != null) {
-            // Жанри (2 колонки)
             genreAdapter = new FilterOptionsAdapter(constants.genres != null ? constants.genres : new ArrayList<>());
             genreAdapter.setStates(filter.genresInclude, filter.genresExclude);
             rvGenres.setLayoutManager(new GridLayoutManager(getContext(), 2));
             rvGenres.setAdapter(genreAdapter);
 
-            // Медіа (2 колонки)
             mediaAdapter = new FilterOptionsAdapter(constants.mediaTypes != null ? constants.mediaTypes : new ArrayList<>());
             mediaAdapter.setStates(filter.mediaTypesInclude, filter.mediaTypesExclude);
             rvMedia.setLayoutManager(new GridLayoutManager(getContext(), 2));
             rvMedia.setAdapter(mediaAdapter);
         }
 
-        // Відновлення значень полів
         cbStrict.setChecked(filter.genresStrict);
         if (filter.yearFrom != null) etYearFrom.setText(String.valueOf(filter.yearFrom));
         if (filter.yearTo != null) etYearTo.setText(String.valueOf(filter.yearTo));
         if (filter.scoreFrom != null) etScoreFrom.setText(String.valueOf(filter.scoreFrom));
         if (filter.scoreTo != null) etScoreTo.setText(String.valueOf(filter.scoreTo));
 
-        // Кнопки
         view.findViewById(R.id.btnCloseFilter).setOnClickListener(v -> dismiss());
         view.findViewById(R.id.btnReset).setOnClickListener(v -> resetFilters());
         view.findViewById(R.id.btnApply).setOnClickListener(v -> applyFilters());
     }
 
     private void resetFilters() {
-        genreAdapter.reset();
-        mediaAdapter.reset();
+        if (genreAdapter != null) genreAdapter.reset();
+        if (mediaAdapter != null) mediaAdapter.reset();
         cbStrict.setChecked(false);
         etYearFrom.setText(""); etYearTo.setText("");
         etScoreFrom.setText(""); etScoreTo.setText("");
     }
 
     private void applyFilters() {
-        // Збираємо дані з адаптерів
-        filter.genresInclude.clear();
-        filter.genresExclude.clear();
-        for (Map.Entry<String, Integer> entry : genreAdapter.getStates().entrySet()) {
-            if (entry.getValue() == FilterOptionsAdapter.STATE_INCLUDE) filter.genresInclude.add(entry.getKey());
-            if (entry.getValue() == FilterOptionsAdapter.STATE_EXCLUDE) filter.genresExclude.add(entry.getKey());
+        if (genreAdapter != null) {
+            filter.genresInclude.clear();
+            filter.genresExclude.clear();
+            for (Map.Entry<String, Integer> entry : genreAdapter.getStates().entrySet()) {
+                if (entry.getValue() == FilterOptionsAdapter.STATE_INCLUDE) filter.genresInclude.add(entry.getKey());
+                if (entry.getValue() == FilterOptionsAdapter.STATE_EXCLUDE) filter.genresExclude.add(entry.getKey());
+            }
         }
 
-        filter.mediaTypesInclude.clear();
-        filter.mediaTypesExclude.clear();
-        for (Map.Entry<String, Integer> entry : mediaAdapter.getStates().entrySet()) {
-            if (entry.getValue() == FilterOptionsAdapter.STATE_INCLUDE) filter.mediaTypesInclude.add(entry.getKey());
-            if (entry.getValue() == FilterOptionsAdapter.STATE_EXCLUDE) filter.mediaTypesExclude.add(entry.getKey());
+        if (mediaAdapter != null) {
+            filter.mediaTypesInclude.clear();
+            filter.mediaTypesExclude.clear();
+            for (Map.Entry<String, Integer> entry : mediaAdapter.getStates().entrySet()) {
+                if (entry.getValue() == FilterOptionsAdapter.STATE_INCLUDE) filter.mediaTypesInclude.add(entry.getKey());
+                if (entry.getValue() == FilterOptionsAdapter.STATE_EXCLUDE) filter.mediaTypesExclude.add(entry.getKey());
+            }
         }
 
         filter.genresStrict = cbStrict.isChecked();

@@ -83,25 +83,31 @@ public class SearchFragment extends Fragment {
 
         // Кнопка Фільтрів
         view.findViewById(R.id.btnFilter).setOnClickListener(v -> {
-            AppConstants constants = viewModel.getConstants().getValue();
-            FilterRequest current = viewModel.getCurrentFilter();
+            // Перевірка на null, щоб уникнути крашу
+            if (viewModel.getConstants().getValue() == null) {
+                // Можна показати Toast "Loading data..."
+                return;
+            }
 
-            FilterBottomSheet sheet = new FilterBottomSheet(current, constants, newFilter -> {
-                viewModel.searchAdvanced(newFilter);
-            });
+            FilterBottomSheet sheet = new FilterBottomSheet(
+                    viewModel.getCurrentFilter(),
+                    viewModel.getConstants().getValue(),
+                    newFilter -> viewModel.searchAdvanced(newFilter)
+            );
             sheet.show(getParentFragmentManager(), "FilterSheet");
         });
 
         // Кнопка Сортування
         view.findViewById(R.id.btnSort).setOnClickListener(v -> {
-            FilterRequest current = viewModel.getCurrentFilter();
-
-            SortingBottomSheet sheet = new SortingBottomSheet(current, (sortBy, sortOrder) -> {
-                // Оновлюємо тільки поля сортування в поточному запиті
-                current.sortBy = sortBy;
-                current.sortOrder = sortOrder;
-                viewModel.searchAdvanced(current);
-            });
+            SortingBottomSheet sheet = new SortingBottomSheet(
+                    viewModel.getCurrentFilter(),
+                    (sortBy, sortOrder) -> {
+                        FilterRequest current = viewModel.getCurrentFilter();
+                        current.sortBy = sortBy;
+                        current.sortOrder = sortOrder;
+                        viewModel.searchAdvanced(current);
+                    }
+            );
             sheet.show(getParentFragmentManager(), "SortSheet");
         });
 

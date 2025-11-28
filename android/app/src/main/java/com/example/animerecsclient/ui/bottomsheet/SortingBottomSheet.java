@@ -36,11 +36,13 @@ public class SortingBottomSheet extends BottomSheetDialogFragment {
         RadioGroup rgBy = view.findViewById(R.id.rgSortBy);
         RadioGroup rgOrder = view.findViewById(R.id.rgSortOrder);
 
-        // 1. Відновлюємо стан
-        setRadioState(rgBy, currentFilter.sortBy);
-        setOrderState(rgOrder, currentFilter.sortOrder);
+        // Відновлення стану
+        if (currentFilter != null) {
+            setRadioState(rgBy, currentFilter.sortBy);
+            setOrderState(rgOrder, currentFilter.sortOrder);
+        }
 
-        // 2. Слухачі (Авто-застосування)
+        // Авто-застосування
         rgBy.setOnCheckedChangeListener((group, checkedId) -> applySort(rgBy, rgOrder));
         rgOrder.setOnCheckedChangeListener((group, checkedId) -> applySort(rgBy, rgOrder));
 
@@ -60,6 +62,7 @@ public class SortingBottomSheet extends BottomSheetDialogFragment {
     }
 
     private void setRadioState(RadioGroup rg, String val) {
+        if (val == null) return;
         if (val.equals("rank")) rg.check(R.id.rbRank);
         else if (val.equals("start_season")) rg.check(R.id.rbYear);
         else if (val.equals("title")) rg.check(R.id.rbTitle);
@@ -67,6 +70,7 @@ public class SortingBottomSheet extends BottomSheetDialogFragment {
     }
 
     private void setOrderState(RadioGroup rg, String val) {
+        if (val == null) return;
         rg.check(val.equals("asc") ? R.id.rbAsc : R.id.rbDesc);
     }
 }
