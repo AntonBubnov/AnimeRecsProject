@@ -222,48 +222,79 @@ def get_evaluation_item(current_user: models.User = Depends(get_current_user), d
 
 @app.get("/feed", response_model=List[AnimeResponse])
 def get_recommendation_feed(
-    page: int = 1,          # Номер сторінки
-    limit: int = 50,        # Кількість на сторінці
+    sort_by: str = "popularity", # popularity, rank, year
+    page: int = 1,
+    limit: int = 50,
     current_user: models.User = Depends(get_current_user), 
     db: Session = Depends(get_db)
 ):
+    """
+    Генерує персональну стрічку.
+    Сортування: Primary = Score (DESC), Secondary = sort_by.
+    """
+    # 1. Отримуємо оцінки
     user_ratings = db.query(models.Rating).filter(models.Rating.user_id == current_user.id).all()
-    rated_ids = {r.anime_id for r in user_ratings if r.rating_type in ['LIKE', 'DISLIKE', 'PLAN']}
     
-    # Розрахунок Score
-    scores = {}
+    rated_ids = {
+        r.anime_id for r in user_ratings 
+        if r.rating_type in ['LIKE', 'DISLIKE', 'PLAN']
+    }
+    
+    # 2. Розрахунок ProfileScore
+    scores = {} 
     for r in user_ratings:
         if r.anime_id not in GRAPH_ADJ: continue
-        impact = 1.0 if r.rating_type == 'LIKE' else (-1.0 if r.rating_type == 'DISLIKE' else (0.2 if r.rating_type == 'PLAN' else 0))
+        
+        impact = 0.0
+        if r.rating_type == 'LIKE': impact = 1.0
+        elif r.rating_type == 'DISLIKE': impact = -1.0
+        elif r.rating_type == 'PLAN': impact = 0.2
+        
         if impact == 0: continue
+            
         for neighbor_id, weight in GRAPH_ADJ[r.anime_id].items():
             scores[neighbor_id] = scores.get(neighbor_id, 0.0) + (impact * weight)
 
-    # Формуємо повний список кандидатів
-    # Оптимізація: для пагінації нам все одно треба відсортувати все, 
-    # але ми створюємо повні об'єкти AnimeResponse тільки для потрібної сторінки
-    
+    # 3. Формуємо кандидатів
     candidates = []
-    for aid in METADATA:
+    
+    for aid, meta in METADATA.items():
         if aid in rated_ids: continue
-        # Зберігаємо кортеж (score, popularity, id) для сортування
-        sc = scores.get(aid, 0.0)
-        pop = METADATA[aid].get("num_list_users", 0)
-        candidates.append((sc, pop, aid))
+            
+        score = scores.get(aid, 0.0)
+        
+        # Визначаємо вторинний ключ сортування
+        secondary_val = 0
+        if sort_by == "rank":
+            # Інвертуємо ранг, бо при сортуванні DESC: -1 > -100 (Тобто ранг 1 буде вище)
+            rank = meta.get("rank")
+            secondary_val = -rank if rank else -999999
+        elif sort_by == "year":
+            secondary_val = (meta.get("start_season") or {}).get("year", 0)
+        else: # popularity
+            secondary_val = meta.get("num_list_users") or 0
+
+        candidates.append({
+            "data": meta,
+            "score": score,
+            "sort_key": (score, secondary_val) # Кортеж для сортування
+        })
+            
+    # 4. Сортування (DESC)
+    # Python порівнює кортежі елемент за елементом: спочатку score, потім secondary_val
+    candidates.sort(key=lambda x: x['sort_key'], reverse=True)
     
-    # Сортування
-    candidates.sort(key=lambda x: (x[0], x[1]), reverse=True)
-    
-    # Пагінація (Slicing)
+    # 5. Пагінація
     start = (page - 1) * limit
     end = start + limit
     page_items = candidates[start:end]
     
-    # Формування фінальної відповіді
+    # Формування відповіді
     result = []
-    for sc, pop, aid in page_items:
-        result.append(create_anime_response(aid, score=sc))
-        
+    for item in page_items:
+        meta = item['data']
+        result.append(create_anime_response(meta["id"], score=item['score']))
+
     return result
 
 @app.get("/search", response_model=List[AnimeResponse])
