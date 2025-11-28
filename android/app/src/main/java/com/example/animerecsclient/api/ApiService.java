@@ -28,8 +28,9 @@ public interface ApiService {
     // 3. Отримання стрічки з пагінацією 📜
     @retrofit2.http.GET("feed")
     Call<java.util.List<com.example.animerecsclient.model.Anime>> getFeed(
-            @Query("page") int page,
-            @Query("limit") int limit
+            @retrofit2.http.Query("sort_by") String sortBy,
+            @retrofit2.http.Query("page") int page,
+            @retrofit2.http.Query("limit") int limit
     );
 
     // 4. Отримання аніме для оцінки ⚖️
