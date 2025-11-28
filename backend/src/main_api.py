@@ -396,12 +396,18 @@ def search_advanced(req: FilterRequest):
 
     # 5. Сортування
     reverse = (req.sort_order == "desc")
+
+    # Інвертуємо логіку для Rank та Title.
+    # Користувач очікує, що "Descending" (або "Best/Default") для Рангу - це 1, 2, 3...
+    # А для Назви - це A, B, C...
+    if req.sort_by in ["rank", "title"]:
+        reverse = not reverse
     
     def get_sort_key(item):
         if req.sort_by == "rank":
             return item.get("rank") or 999999 # Rank 1 краще, тому asc default. Але якщо desc, то logic reverses
         elif req.sort_by == "popularity":
-            return item.get("num_list_users", 0) or item.get("members", 0)
+            return item.get("num_list_users", 0)
         elif req.sort_by == "start_season":
             return item.get("start_season", {}).get("year", 0)
         elif req.sort_by == "title":
