@@ -23,6 +23,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 METADATA: Dict[int, Dict[str, Any]] = {} 
 EVALUATION_QUEUE: List[Dict] = [] 
 GRAPH_ADJ: Dict = {} 
+ALL_GENRES: List[str] = []
+ALL_MEDIA_TYPES: List[str] = []
 
 # Для пошуку: словник {id: "Title English Title Synonyms"}
 SEARCH_INDEX: Dict[int, str] = {}
@@ -51,10 +53,37 @@ class AnimeResponse(BaseModel):
     score: float = 0.0     # ProfileScore
     cluster_id: Optional[int] = None
 
+# Модель запиту фільтрації
+class FilterRequest(BaseModel):
+    # Сортування
+    sort_by: str = "popularity" # rank, popularity, start_season, title
+    sort_order: str = "desc"    # asc, desc
+    
+    # Фільтри
+    genres_include: List[str] = []
+    genres_exclude: List[str] = []
+    genres_strict: bool = False # True = AND, False = OR
+    
+    media_types_include: List[str] = []
+    media_types_exclude: List[str] = []
+    
+    year_from: Optional[int] = None
+    year_to: Optional[int] = None
+    
+    score_from: Optional[float] = None
+    score_to: Optional[float] = None
+    
+    page: int = 1
+    limit: int = 50
+
 # --- ЗАВАНТАЖЕННЯ ДАНИХ ---
 @app.on_event("startup")
 def load_data():
-    global METADATA, EVALUATION_QUEUE, GRAPH_ADJ, SEARCH_INDEX
+    global METADATA, EVALUATION_QUEUE, GRAPH_ADJ, SEARCH_INDEX, ALL_GENRES, ALL_MEDIA_TYPES
+    
+    genres_set = set()
+    media_types_set = set()
+    
     print("Завантаження даних у пам'ять...")
     
     # 1. Metadata (Повне завантаження)
@@ -72,6 +101,15 @@ def load_data():
                 if alts.get("ja"): titles.append(alts["ja"])
                 titles.extend(alts.get("synonyms", []))
                 SEARCH_INDEX[aid] = " | ".join(filter(None, titles)).lower()
+
+                # Збір статистики для фільтрів
+                for g in data.get("genres", []):
+                    genres_set.add(g["name"])
+                if data.get("media_type"):
+                    media_types_set.add(data.get("media_type"))
+
+    ALL_GENRES = sorted(list(genres_set))
+    ALL_MEDIA_TYPES = sorted(list(media_types_set))
 
     # 2. Queue
     if os.path.exists(config.QUEUE_FILE):
@@ -301,3 +339,84 @@ def get_library(
             response.append(resp_item)
             
     return response
+
+@app.get("/meta/constants")
+def get_constants():
+    """Повертає доступні жанри та типи медіа для побудови UI фільтрів"""
+    return {
+        "genres": ALL_GENRES,
+        "media_types": ALL_MEDIA_TYPES
+    }
+
+@app.post("/search/advanced", response_model=List[AnimeResponse])
+def search_advanced(req: FilterRequest):
+    """Складний пошук та фільтрація"""
+    candidates = []
+    
+    for aid, meta in METADATA.items():
+        # 1. Фільтр по Року
+        if req.year_from is not None or req.year_to is not None:
+            season = meta.get("start_season", {})
+            year = season.get("year")
+            if year is None: continue # Пропускаємо, якщо даних немає
+            if req.year_from is not None and year < req.year_from: continue
+            if req.year_to is not None and year > req.year_to: continue
+
+        # 2. Фільтр по Оцінці (Mean)
+        if req.score_from is not None or req.score_to is not None:
+            score = meta.get("mean")
+            if score is None: continue
+            if req.score_from is not None and score < req.score_from: continue
+            if req.score_to is not None and score > req.score_to: continue
+
+        # 3. Фільтр по Media Type
+        m_type = meta.get("media_type")
+        if req.media_types_exclude and m_type in req.media_types_exclude: continue
+        if req.media_types_include and m_type not in req.media_types_include: continue
+
+        # 4. Фільтр по Жанрах
+        anime_genres = {g["name"] for g in meta.get("genres", [])}
+        
+        # Виключення (-)
+        if req.genres_exclude:
+            # Якщо є хоч один заборонений жанр -> пропускаємо
+            if not anime_genres.isdisjoint(req.genres_exclude): continue
+            
+        # Включення (+)
+        if req.genres_include:
+            if req.genres_strict:
+                # Строго: аніме повинно мати ВСІ обрані жанри (issubset)
+                if not set(req.genres_include).issubset(anime_genres): continue
+            else:
+                # Не строго: аніме повинно мати ХОЧА Б ОДИН (intersection)
+                if not not anime_genres.intersection(req.genres_include): pass # OK
+                else: continue # Немає перетинів
+
+        candidates.append(meta)
+
+    # 5. Сортування
+    reverse = (req.sort_order == "desc")
+    
+    def get_sort_key(item):
+        if req.sort_by == "rank":
+            return item.get("rank") or 999999 # Rank 1 краще, тому asc default. Але якщо desc, то logic reverses
+        elif req.sort_by == "popularity":
+            return item.get("num_list_users", 0) or item.get("members", 0)
+        elif req.sort_by == "start_season":
+            return item.get("start_season", {}).get("year", 0)
+        elif req.sort_by == "title":
+            return item.get("alternative_titles", {}).get("en", "") or item.get("title", "")
+        return 0
+
+    # Rank зазвичай сортують ASC (1, 2, 3), Popularity DESC.
+    # Тут ми просто слідуємо req.sort_order.
+    # Нюанс для Rank: якщо сортуємо ASC, то None значення мають бути в кінці.
+    
+    candidates.sort(key=get_sort_key, reverse=reverse)
+
+    # 6. Пагінація
+    start = (req.page - 1) * req.limit
+    end = start + req.limit
+    page_items = candidates[start:end]
+
+    return [create_anime_response(item["id"]) for item in page_items]
