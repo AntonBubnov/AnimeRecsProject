@@ -107,7 +107,7 @@ public class RecommendationFragment extends Fragment {
         for (Anime anime : data) {
             items.add(new HorizontalAnimeAdapter.DisplayItem(
                     anime.getId(), anime.getDisplayTitle(), anime.getPictureMedium(),
-                    String.format("%.1f", anime.getScore()) // Можна показувати score або рік
+                    String.format("Score: %.1f", anime.getScore()) // Можна показувати score або рік
             ));
         }
 
@@ -146,5 +146,16 @@ public class RecommendationFragment extends Fragment {
         layoutGrid.setVisibility(View.GONE);
         layoutDashboard.setVisibility(View.VISIBLE);
         // Можна очистити gridList у ViewModel, щоб звільнити пам'ять
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Перезавантажуємо вітрину, щоб прибрати оцінені та оновити порядок
+        if (viewModel != null) {
+            viewModel.loadDashboard();
+            // Якщо була відкрита сітка, можна оновити і її, або закрити
+            //viewModel.openGrid();
+        }
     }
 }

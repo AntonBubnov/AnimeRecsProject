@@ -98,4 +98,14 @@ public class EvaluationFragment extends Fragment {
         btnSkip.setOnClickListener(v -> viewModel.rateCurrentAnime("SKIP"));
         btnPlan.setOnClickListener(v -> viewModel.rateCurrentAnime("PLAN"));
     }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        // При поверненні на екран завжди оновлюємо чергу,
+        // бо стан міг змінитися на екрані деталей.
+        if (viewModel != null) {
+            viewModel.loadNextAnime();
+        }
+    }
 }
