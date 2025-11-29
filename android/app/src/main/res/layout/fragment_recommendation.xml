@@ -14,23 +14,36 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingBottom="80dp"> <TextView
-            android:text="Most Popular"
-            style="@style/SectionHeaderStyle" />
+            android:paddingBottom="80dp">
+            <TextView
+                android:id="@+id/tvHeaderPopular"
+                android:text="Most Popular"
+                style="@style/SectionHeaderStyle"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground" />
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvPopular"
                 style="@style/CarouselStyle"/>
 
             <TextView
+                android:id="@+id/tvHeaderRank"
                 android:text="Top Rated"
-                style="@style/SectionHeaderStyle" />
+                style="@style/SectionHeaderStyle"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground" />
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvRank"
                 style="@style/CarouselStyle"/>
 
             <TextView
+                android:id="@+id/tvHeaderNew"
                 android:text="New Releases"
-                style="@style/SectionHeaderStyle" />
+                style="@style/SectionHeaderStyle"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground" />
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvNew"
                 style="@style/CarouselStyle"/>

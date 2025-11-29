@@ -65,6 +65,16 @@ public class RecommendationFragment extends Fragment {
         rvGrid.setLayoutManager(gridLayoutManager);
         rvGrid.setAdapter(adapterGrid);
 
+        // Клікабельні заголовки
+        view.findViewById(R.id.tvHeaderPopular).setOnClickListener(v ->
+                openGrid("popularity", "Most Popular"));
+
+        view.findViewById(R.id.tvHeaderRank).setOnClickListener(v ->
+                openGrid("rank", "Top Rated"));
+
+        view.findViewById(R.id.tvHeaderNew).setOnClickListener(v ->
+                openGrid("year", "New Releases"));
+
         // Infinite Scroll для сітки
         rvGrid.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
