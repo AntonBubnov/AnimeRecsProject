@@ -1,10 +1,11 @@
 package com.example.animerecsclient.ui;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -21,7 +22,11 @@ public class LibraryListFragment extends Fragment {
     private LibraryViewModel viewModel;
     private AnimeAdapter adapter;
 
-    // Метод для створення фрагмента з параметром
+    // UI Elements
+    private RecyclerView recyclerView;
+    private ProgressBar progressBar;
+    private TextView tvError;
+
     public static LibraryListFragment newInstance(String status) {
         LibraryListFragment fragment = new LibraryListFragment();
         Bundle args = new Bundle();
@@ -41,35 +46,48 @@ public class LibraryListFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        // Використовуємо той самий макет, що і для рекомендацій (там просто RecyclerView)
-        return inflater.inflate(R.layout.fragment_recommendation, container, false);
+        // ВИПРАВЛЕННЯ: Використовуємо власний макет, а не макет рекомендацій
+        return inflater.inflate(R.layout.fragment_library_list, container, false);
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        RecyclerView recyclerView = view.findViewById(R.id.rvAnimeFeed);
-        // Приховуємо прогрес бар, бо логіка простіша
-        view.findViewById(R.id.progressBar).setVisibility(View.GONE);
+        // 1. Ініціалізація View (з новими ID)
+        recyclerView = view.findViewById(R.id.rvLibraryList);
+        progressBar = view.findViewById(R.id.pbLibrary);
+        tvError = view.findViewById(R.id.tvLibraryError);
 
+        // 2. Налаштування списку
         adapter = new AnimeAdapter(getContext());
-        recyclerView.setLayoutManager(new GridLayoutManager(getContext(), 2)); // Або 3 для компактності
+        recyclerView.setLayoutManager(new GridLayoutManager(getContext(), 2));
         recyclerView.setAdapter(adapter);
 
+        // 3. ViewModel
         viewModel = new ViewModelProvider(this).get(LibraryViewModel.class);
+
+        // 4. Підписка
         viewModel.getLibraryList().observe(getViewLifecycleOwner(), animes -> {
-            adapter.setAnimeList(animes);
+            progressBar.setVisibility(View.GONE);
+            if (animes != null && !animes.isEmpty()) {
+                adapter.setAnimeList(animes);
+                tvError.setVisibility(View.GONE);
+            } else {
+                // Показуємо повідомлення, якщо список порожній
+                adapter.setAnimeList(new java.util.ArrayList<>());
+                tvError.setVisibility(View.VISIBLE);
+                tvError.setText("No items yet");
+            }
         });
 
-        // Завантажуємо дані для конкретного статусу
+        // Завантаження
         viewModel.loadLibrary(status);
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        // Оновлюємо список при поверненні (на випадок, якщо юзер змінив статус в деталях)
         viewModel.loadLibrary(status);
     }
 }
