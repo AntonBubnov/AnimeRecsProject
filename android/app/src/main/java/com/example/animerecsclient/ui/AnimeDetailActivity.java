@@ -92,12 +92,11 @@ public class AnimeDetailActivity extends AppCompatActivity {
             onBackPressed();
             return true;
         } else if (item.getItemId() == R.id.action_close) {
-            // Хрестик "Закрити" - повне закриття стеку деталей
-            //finishAffinity(); // Закриває цю Activity і всі батьківські в цьому таску
-            // АБО, якщо хочете повернутися саме на MainActivity:
+            // повернутися саме на MainActivity:
             Intent intent = new Intent(this, MainActivity.class);
             intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             startActivity(intent);
+            finish();
             return true;
         }
         return super.onOptionsItemSelected(item);
