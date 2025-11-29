@@ -8,6 +8,9 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ProgressBar;
@@ -88,13 +91,6 @@ public class SearchFragment extends Fragment {
         });
 
         // Обробка натискання на фон для приховування клавіатури
-        view.findViewById(R.id.rootSearchLayout).setOnTouchListener((v, event) -> {
-            hideKeyboard(v);
-            v.clearFocus(); // Знімаємо фокус з поля пошуку
-            return false;
-        });
-
-        // Обробка натискання на фон для приховування клавіатури
         view.findViewById(R.id.rvSearchResults).setOnTouchListener((v, event) -> {
             hideKeyboard(v);
             v.clearFocus(); // Знімаємо фокус з поля пошуку
@@ -113,36 +109,6 @@ public class SearchFragment extends Fragment {
                 return true;
             }
             return false;
-        });
-
-        // Кнопка Фільтрів
-        view.findViewById(R.id.btnFilter).setOnClickListener(v -> {
-            // Перевірка на null, щоб уникнути крашу
-            if (viewModel.getConstants().getValue() == null) {
-                // Можна показати Toast "Loading data..."
-                return;
-            }
-
-            FilterBottomSheet sheet = new FilterBottomSheet(
-                    viewModel.getCurrentFilter(),
-                    viewModel.getConstants().getValue(),
-                    newFilter -> viewModel.searchAdvanced(newFilter, true)
-            );
-            sheet.show(getParentFragmentManager(), "FilterSheet");
-        });
-
-        // Кнопка Сортування
-        view.findViewById(R.id.btnSort).setOnClickListener(v -> {
-            SortingBottomSheet sheet = new SortingBottomSheet(
-                    viewModel.getCurrentFilter(),
-                    (sortBy, sortOrder) -> {
-                        FilterRequest current = viewModel.getCurrentFilter();
-                        current.sortBy = sortBy;
-                        current.sortOrder = sortOrder;
-                        viewModel.searchAdvanced(current, true);
-                    }
-            );
-            sheet.show(getParentFragmentManager(), "SortSheet");
         });
 
         // Слухач вводу тексту з затримкою (Debounce)
@@ -170,5 +136,67 @@ public class SearchFragment extends Fragment {
         if (imm != null) {
             imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
         }
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setHasOptionsMenu(true); // Вмикаємо меню
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (getActivity() instanceof MainActivity) {
+            ((MainActivity) getActivity()).setToolbarTitle("Search Anime");
+            ((MainActivity) getActivity()).showBackArrow(false);
+        }
+    }
+
+    @Override
+    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
+        inflater.inflate(R.menu.menu_search, menu);
+        super.onCreateOptionsMenu(menu, inflater);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        int id = item.getItemId();
+        if (id == R.id.action_sort) {
+            showSortDialog(); // Ваш метод відкриття BottomSheet
+            return true;
+        } else if (id == R.id.action_filter) {
+            showFilterDialog(); // Ваш метод відкриття BottomSheet
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    // Перенесіть логіку з setOnClickListener сюди
+    private void showSortDialog() {
+        SortingBottomSheet sheet = new SortingBottomSheet(
+                viewModel.getCurrentFilter(),
+                (sortBy, sortOrder) -> {
+                    FilterRequest current = viewModel.getCurrentFilter();
+                    current.sortBy = sortBy;
+                    current.sortOrder = sortOrder;
+                    viewModel.searchAdvanced(current, true);
+                }
+        );
+        sheet.show(getParentFragmentManager(), "SortSheet");
+    }
+    private void showFilterDialog() {
+        // Перевірка на null, щоб уникнути крашу
+        if (viewModel.getConstants().getValue() == null) {
+            // Можна показати Toast "Loading data..."
+            return;
+        }
+
+        FilterBottomSheet sheet = new FilterBottomSheet(
+                viewModel.getCurrentFilter(),
+                viewModel.getConstants().getValue(),
+                newFilter -> viewModel.searchAdvanced(newFilter, true)
+        );
+        sheet.show(getParentFragmentManager(), "FilterSheet");
     }
 }

@@ -9,60 +9,18 @@
     android:focusable="true"
     android:focusableInTouchMode="true">
 
-    <LinearLayout
+    <EditText
+        android:id="@+id/etSearchQuery"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:background="#FFFFFF"
-        android:elevation="4dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="end"
-            android:layout_marginBottom="8dp">
-
-            <Button
-                android:id="@+id/btnSort"
-                style="?attr/borderlessButtonStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minHeight="40dp"
-                android:text="Sort"
-                android:textColor="?attr/colorPrimary"
-                android:drawableLeft="@android:drawable/ic_menu_sort_by_size"
-                android:drawablePadding="4dp"
-                android:drawableTint="?attr/colorPrimary"
-                android:layout_marginEnd="8dp"/>
-
-            <Button
-                android:id="@+id/btnFilter"
-                style="?attr/borderlessButtonStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minHeight="40dp"
-                android:text="Filters"
-                android:textColor="?attr/colorPrimary"
-                android:drawableLeft="@android:drawable/ic_menu_manage"
-                android:drawablePadding="4dp"
-                android:drawableTint="?attr/colorPrimary"/>
-        </LinearLayout>
-
-        <EditText
-            android:id="@+id/etSearchQuery"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:background="@android:drawable/edit_text"
-            android:hint="Search anime..."
-            android:inputType="textVisiblePassword|textNoSuggestions"
-            android:maxLines="1"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:drawableStart="@android:drawable/ic_menu_search"
-            android:drawablePadding="8dp"/>
-    </LinearLayout>
+        android:layout_height="50dp"
+        android:background="@android:drawable/edit_text"
+        android:hint="Search anime..."
+        android:inputType="textVisiblePassword|textNoSuggestions"
+        android:maxLines="1"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:drawableStart="@android:drawable/ic_menu_search"
+        android:drawablePadding="8dp"/>
 
     <ProgressBar
         android:id="@+id/progressBarSearch"

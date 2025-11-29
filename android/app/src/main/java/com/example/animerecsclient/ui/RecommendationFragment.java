@@ -5,6 +5,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.Toolbar;
@@ -46,6 +47,18 @@ public class RecommendationFragment extends Fragment {
         viewModel = new ViewModelProvider(this).get(RecommendationViewModel.class);
         initUI(view);
         observeViewModel();
+
+        requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (layoutGrid.getVisibility() == View.VISIBLE) {
+                    closeGrid();
+                } else {
+                    setEnabled(false); // Вимикаємо цей callback
+                    requireActivity().onBackPressed(); // Виконуємо стандартну дію (вихід)
+                }
+            }
+        });
     }
 
     private void initUI(View view) {
@@ -91,10 +104,6 @@ public class RecommendationFragment extends Fragment {
                 }
             }
         });
-
-        // Кнопка "Назад" у сітці
-        Toolbar gridToolbar = view.findViewById(R.id.gridToolbar);
-        gridToolbar.setNavigationOnClickListener(v -> closeGrid());
     }
 
     // Допоміжний метод для налаштування однієї каруселі
@@ -148,19 +157,40 @@ public class RecommendationFragment extends Fragment {
         layoutDashboard.setVisibility(View.GONE);
         layoutGrid.setVisibility(View.VISIBLE);
 
-        ((Toolbar) layoutGrid.findViewById(R.id.gridToolbar)).setTitle(title);
+        // Змінюємо заголовок Toolbar MainActivity
+        if (getActivity() instanceof MainActivity) {
+            ((MainActivity) getActivity()).setToolbarTitle(title);
+            ((MainActivity) getActivity()).showBackArrow(true); // Вмикаємо стрілку
+        }
+
         viewModel.openGrid(sortBy);
     }
 
     private void closeGrid() {
         layoutGrid.setVisibility(View.GONE);
         layoutDashboard.setVisibility(View.VISIBLE);
-        // Можна очистити gridList у ViewModel, щоб звільнити пам'ять
+
+        // Повертаємо як було
+        if (getActivity() instanceof MainActivity) {
+            ((MainActivity) getActivity()).setToolbarTitle("For You");
+            ((MainActivity) getActivity()).showBackArrow(false);
+        }
     }
 
     @Override
     public void onResume() {
         super.onResume();
+        // Відновлюємо стан заголовка
+        if (getActivity() instanceof MainActivity) {
+            if (layoutGrid.getVisibility() == View.VISIBLE) {
+                // Якщо була відкрита сітка, треба відновити її назву (можна зберегти у ViewModel)
+                ((MainActivity) getActivity()).showBackArrow(true);
+            } else {
+                ((MainActivity) getActivity()).setToolbarTitle("For You");
+                ((MainActivity) getActivity()).showBackArrow(false);
+            }
+        }
+
         if (viewModel == null) return;
 
         // Перевіряємо, який шар видимий

@@ -4,6 +4,9 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -31,6 +34,12 @@ public class EvaluationFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_evaluation, container, false);
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setHasOptionsMenu(true); // Дозволяємо фрагменту мати своє меню
     }
 
     @Override
@@ -102,10 +111,29 @@ public class EvaluationFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+        if (getActivity() instanceof MainActivity) {
+            ((MainActivity) getActivity()).setToolbarTitle("WhatsNext");
+            ((MainActivity) getActivity()).showBackArrow(false); // Немає стрілки
+        }
         // При поверненні на екран завжди оновлюємо чергу,
         // бо стан міг змінитися на екрані деталей.
         if (viewModel != null) {
             viewModel.loadNextAnime();
         }
+    }
+
+    @Override
+    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
+        inflater.inflate(R.menu.menu_evaluation, menu); // Вставляємо кнопку Logout
+        super.onCreateOptionsMenu(menu, inflater);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == R.id.action_logout) {
+            ((MainActivity) getActivity()).logoutUser();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 }
