@@ -61,7 +61,8 @@ public class LibraryListFragment extends Fragment {
 
         // 2. Налаштування списку
         adapter = new AnimeAdapter(getContext());
-        recyclerView.setLayoutManager(new GridLayoutManager(getContext(), 2));
+        GridLayoutManager layoutManager = new GridLayoutManager(getContext(), 2);
+        recyclerView.setLayoutManager(layoutManager);
         recyclerView.setAdapter(adapter);
 
         // 3. ViewModel
@@ -81,13 +82,33 @@ public class LibraryListFragment extends Fragment {
             }
         });
 
-        // Завантаження
-        viewModel.loadLibrary(status);
+        // Infinite Scroll
+        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
+                super.onScrolled(rv, dx, dy);
+                int visibleItemCount = layoutManager.getChildCount();
+                int totalItemCount = layoutManager.getItemCount();
+                int firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition();
+
+                if ((visibleItemCount + firstVisibleItemPosition) >= totalItemCount
+                        && firstVisibleItemPosition >= 0
+                        && totalItemCount >= 20) {
+
+                    // false означає "не скидати, а довантажити"
+                    viewModel.loadLibrary(status, false);
+                }
+            }
+        });
+
+        // Завантаження (true = перша сторінка)
+        viewModel.loadLibrary(status, true);
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        viewModel.loadLibrary(status);
+        // При поверненні оновлюємо список з нуля (true)
+        viewModel.loadLibrary(status, true);
     }
 }

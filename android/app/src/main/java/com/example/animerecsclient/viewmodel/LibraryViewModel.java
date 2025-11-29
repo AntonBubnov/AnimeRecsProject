@@ -7,6 +7,7 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import com.example.animerecsclient.model.Anime;
 import com.example.animerecsclient.repository.AnimeRepository;
+import java.util.ArrayList;
 import java.util.List;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -18,6 +19,12 @@ public class LibraryViewModel extends AndroidViewModel {
     // Ми використовуємо один ViewModel, але методи будуть викликатися з різними параметрами
     private MutableLiveData<List<Anime>> libraryList = new MutableLiveData<>();
 
+    // Стан пагінації
+    private int currentPage = 1;
+    private boolean isLoading = false;
+    private boolean isLastPage = false;
+    private static final int PAGE_SIZE = 50;
+
     public LibraryViewModel(@NonNull Application application) {
         super(application);
         repository = new AnimeRepository(application);
@@ -25,17 +32,47 @@ public class LibraryViewModel extends AndroidViewModel {
 
     public LiveData<List<Anime>> getLibraryList() { return libraryList; }
 
-    public void loadLibrary(String status) {
-        // Для простоти поки без пагінації (вантажимо перші 100)
-        repository.getLibrary(status, 1, 100).enqueue(new Callback<List<Anime>>() {
+    // Метод для початкового завантаження (або перезавантаження)
+    public void loadLibrary(String status, boolean reset) {
+        if (reset) {
+            currentPage = 1;
+            isLastPage = false;
+            // libraryList.setValue(new ArrayList<>()); // Можна очистити, якщо хочете спінер
+        }
+
+        if (isLoading || isLastPage) return;
+
+        isLoading = true;
+        repository.getLibrary(status, currentPage, PAGE_SIZE).enqueue(new Callback<List<Anime>>() {
             @Override
             public void onResponse(Call<List<Anime>> call, Response<List<Anime>> response) {
-                if (response.isSuccessful()) {
-                    libraryList.setValue(response.body());
+                isLoading = false;
+                if (response.isSuccessful() && response.body() != null) {
+                    List<Anime> newItems = response.body();
+                    List<Anime> currentItems;
+
+                    if (reset) {
+                        currentItems = new ArrayList<>();
+                    } else {
+                        List<Anime> old = libraryList.getValue();
+                        currentItems = old != null ? new ArrayList<>(old) : new ArrayList<>();
+                    }
+
+                    currentItems.addAll(newItems);
+
+                    if (newItems.size() < PAGE_SIZE) {
+                        isLastPage = true;
+                    } else {
+                        currentPage++;
+                    }
+
+                    libraryList.setValue(currentItems);
                 }
             }
             @Override
-            public void onFailure(Call<List<Anime>> call, Throwable t) { }
+            public void onFailure(Call<List<Anime>> call, Throwable t) {
+                isLoading = false;
+            }
         });
     }
 }
