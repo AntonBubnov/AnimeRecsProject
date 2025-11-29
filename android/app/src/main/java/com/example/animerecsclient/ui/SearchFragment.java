@@ -101,6 +101,20 @@ public class SearchFragment extends Fragment {
             return false;
         });
 
+        EditText etSearch = view.findViewById(R.id.etSearchQuery);
+
+        etSearch.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
+                String query = etSearch.getText().toString();
+                viewModel.performSearch(query);
+
+                // Ховаємо клавіатуру
+                hideKeyboard(v);
+                return true;
+            }
+            return false;
+        });
+
         // Кнопка Фільтрів
         view.findViewById(R.id.btnFilter).setOnClickListener(v -> {
             // Перевірка на null, щоб уникнути крашу
