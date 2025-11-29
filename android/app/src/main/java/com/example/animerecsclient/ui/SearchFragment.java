@@ -52,8 +52,28 @@ public class SearchFragment extends Fragment {
 
         // Налаштування списку (перевикористовуємо AnimeAdapter)
         adapter = new AnimeAdapter(getContext());
-        recyclerView.setLayoutManager(new GridLayoutManager(getContext(), 2));
+        GridLayoutManager layoutManager = new GridLayoutManager(getContext(), 2);
+        recyclerView.setLayoutManager(layoutManager);
         recyclerView.setAdapter(adapter);
+
+        // Infinite Scroll
+        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
+                super.onScrolled(rv, dx, dy);
+
+                int visibleItemCount = layoutManager.getChildCount();
+                int totalItemCount = layoutManager.getItemCount();
+                int firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition();
+
+                if ((visibleItemCount + firstVisibleItemPosition) >= totalItemCount
+                        && firstVisibleItemPosition >= 0
+                        && totalItemCount >= 20) { // Не вантажити, якщо список занадто малий
+
+                    viewModel.loadNextPage();
+                }
+            }
+        });
 
         viewModel = new ViewModelProvider(this).get(SearchViewModel.class);
 
@@ -92,7 +112,7 @@ public class SearchFragment extends Fragment {
             FilterBottomSheet sheet = new FilterBottomSheet(
                     viewModel.getCurrentFilter(),
                     viewModel.getConstants().getValue(),
-                    newFilter -> viewModel.searchAdvanced(newFilter)
+                    newFilter -> viewModel.searchAdvanced(newFilter, true)
             );
             sheet.show(getParentFragmentManager(), "FilterSheet");
         });
@@ -105,7 +125,7 @@ public class SearchFragment extends Fragment {
                         FilterRequest current = viewModel.getCurrentFilter();
                         current.sortBy = sortBy;
                         current.sortOrder = sortOrder;
-                        viewModel.searchAdvanced(current);
+                        viewModel.searchAdvanced(current, true);
                     }
             );
             sheet.show(getParentFragmentManager(), "SortSheet");
