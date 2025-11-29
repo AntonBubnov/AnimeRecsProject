@@ -79,7 +79,7 @@ public class RecommendationViewModel extends AndroidViewModel {
         currentPage = 1;
         isLastPage = false;
         gridList.setValue(new ArrayList<>()); // Очистка
-        loadNextGridPage();
+        loadGridFirstPage();
     }
 
     // Пагінація для сітки
@@ -111,6 +111,37 @@ public class RecommendationViewModel extends AndroidViewModel {
             public void onFailure(Call<List<Anime>> call, Throwable t) {
                 isLoading.setValue(false);
                 errorMessage.setValue(t.getMessage());
+            }
+        });
+    }
+
+    // Оновлення поточного списку сітки (викликається з onResume)
+    public void refreshGrid() {
+        if (currentSortBy == null) return;
+
+        // Скидаємо стан пагінації
+        currentPage = 1;
+        isLastPage = false;
+
+        loadGridFirstPage();
+    }
+
+    private void loadGridFirstPage() {
+        isLoading.setValue(true);
+        repository.getFeed(currentSortBy, 1, 50).enqueue(new Callback<List<Anime>>() {
+            @Override
+            public void onResponse(Call<List<Anime>> call, Response<List<Anime>> response) {
+                isLoading.setValue(false);
+                if (response.isSuccessful() && response.body() != null) {
+                    // ТУТ ВІДМІННІСТЬ: Ми ПЕРЕЗАПИСУЄМО список, а не додаємо
+                    gridList.setValue(response.body());
+                    currentPage = 2; // Наступна сторінка буде 2
+                    isLastPage = response.body().isEmpty();
+                }
+            }
+            @Override
+            public void onFailure(Call<List<Anime>> call, Throwable t) {
+                isLoading.setValue(false);
             }
         });
     }

@@ -151,11 +151,15 @@ public class RecommendationFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        // Перезавантажуємо вітрину, щоб прибрати оцінені та оновити порядок
-        if (viewModel != null) {
+        if (viewModel == null) return;
+
+        // Перевіряємо, який шар видимий
+        if (layoutGrid.getVisibility() == View.VISIBLE) {
+            // Якщо ми в сітці -> оновлюємо сітку
+            viewModel.refreshGrid();
+        } else {
+            // Якщо ми на вітрині -> оновлюємо каруселі
             viewModel.loadDashboard();
-            // Якщо була відкрита сітка, можна оновити і її, або закрити
-            //viewModel.openGrid();
         }
     }
 }
